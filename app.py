@@ -7,7 +7,7 @@ from datetime import datetime
 import sqlite3
 import io
 #from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment
+#from openpyxl.styles import Font, PatternFill, Alignment
 import os
 
 app = Flask(__name__, static_folder='static', template_folder='static')
@@ -144,11 +144,10 @@ def clear_bills():
     clear_all_bills()
     return jsonify({'success': True}), 200
 
-@app.route('/api/download/excel', methods=['GET'])
+@app.route('/api/download/excel')
 def download_excel():
-    bills = get_all_bills()
-    if not bills:
-        return jsonify({'error': 'No hay datos para descargar'}), 400
+    return {"error": "Descarga de Excel deshabilitada temporalmente"}, 501
+
     
     wb = Workbook()
     ws = wb.active
