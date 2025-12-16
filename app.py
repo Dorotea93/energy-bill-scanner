@@ -148,6 +148,60 @@ def download_excel():
         return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/download/csv', methods=['GET'])
+def download_csv():
+    try:
+        import csv
+        from io import StringIO
+        
+        conn = sqlite3.connect('data/bills.db')
+        c = conn.cursor()
+        c.execute('SELECT id, url, fecha_captura FROM bills ORDER BY fecha_captura DESC')
+        rows = c.fetchall()
+        conn.close()
+        
+        output = StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['ID', 'URL CNMC', 'Fecha Captura'])
+        
+        for row in rows:
+            writer.writerow(row)
+        
+        output_bytes = output.getvalue().encode('utf-8-sig')
+        output = io.BytesIO(output_bytes)
+        
+        return send_file(
+            output,
+            mimetype='text/csv; charset=utf-8',
+            as_attachment=True,
+            download_name=f'facturas_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/download/json', methods=['GET'])
+def download_json():
+    try:
+        conn = sqlite3.connect('data/bills.db')
+        c = conn.cursor()
+        c.execute('SELECT id, url, fecha_captura FROM bills ORDER BY fecha_captura DESC')
+        rows = c.fetchall()
+        conn.close()
+        
+        bills = [{'id': row[0], 'url': row[1], 'fecha_captura': row[2]} for row in rows]
+        
+        output = io.BytesIO(json.dumps(bills, indent=2, ensure_ascii=False).encode('utf-8'))
+        
+        return send_file(
+            output,
+            mimetype='application/json',
+            as_attachment=True,
+            download_name=f'facturas_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
