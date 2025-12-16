@@ -45,14 +45,50 @@ def scrape():
         if not url:
             return jsonify({'success': False, 'error': 'URL no proporcionada'}), 400
         
+        # Extraer información de la URL
+        info = extract_info_from_url(url)
+        
         # Guardar en BD
         conn = sqlite3.connect('data/bills.db')
         c = conn.cursor()
-        c.execute('INSERT INTO bills (url) VALUES (?)', (url,))
+        c.execute('''
+            INSERT INTO bills (url, fecha_captura) 
+            VALUES (?, CURRENT_TIMESTAMP)
+        ''', (url,))
         conn.commit()
         conn.close()
         
-        return jsonify({'success': True, 'message': 'Factura guardada correctamente'})
+        return jsonify({
+            'success': True, 
+            'message': 'Factura guardada correctamente',
+            'data': info
+        })
+    
+    except Exception as e:
+        print(f'Error: {e}')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+def extract_info_from_url(url):
+    """Extrae información de la URL del QR"""
+    try:
+        import urllib.parse
+        parsed = urllib.parse.urlparse(url)
+        params = urllib.parse.parse_qs(parsed.query)
+        
+        # Extrae parámetros de la URL
+        info = {
+            'url': url,
+            'codigo': params.get('cp', ['N/A'])[0],
+            'fecha_captura': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        print(f'Información extraída: {info}')
+        return info
+    except Exception as e:
+        print(f'Error extrayendo info: {e}')
+        return {'url': url, 'error': str(e)}
+
+
     
     except Exception as e:
         print(f'Error: {e}')
