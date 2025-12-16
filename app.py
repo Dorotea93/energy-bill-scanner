@@ -56,13 +56,13 @@ def scrape():
         
         c.execute('''
             INSERT INTO bills (
-                url, codigo_postal, periodo, tarifa, precio, 
+                url, tarifa, precio, 
                 energia_verde, permanencia, revision, servicios,
                 comercializadora, fecha_captura
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             info.get('url'),
-            info.get('codigo_postal', 'N/A'),
+           # info.get('codigo_postal', 'N/A'),
             info.get('periodo', 'N/A'),
             info.get('tarifa', 'N/A'),
             info.get('precio', 0),
@@ -101,8 +101,7 @@ def download_csv():
         
         # Encabezados
         headers = ['ID', 'Comercializadora', 'Periodo', 'Tarifa', 'Precio (€)', 
-                   'Energía Verde', 'Permanencia', 'Revisión', 'Servicios', 
-                   'Código Postal', 'Fecha Captura', 'URL']
+                   'Energía Verde', 'Permanencia', 'Revisión', 'Servicios', 'Fecha Captura', 'URL']
         writer.writerow(headers)
         
         # Datos
@@ -117,7 +116,7 @@ def download_csv():
                 bill[6] if len(bill) > 6 else 'N/A',  # Permanencia
                 bill[7] if len(bill) > 7 else 'N/A',  # Revisión
                 bill[8] if len(bill) > 8 else 'N/A',  # Servicios
-                bill[1] if len(bill) > 1 else 'N/A',  # Código postal
+                #bill[1] if len(bill) > 1 else 'N/A',  # Código postal
                 bill[10] if len(bill) > 10 else 'N/A',  # Fecha captura
                 bill[9] if len(bill) > 9 else 'N/A'  # URL
             ]
@@ -174,7 +173,7 @@ def extract_info_from_url(url):
         params = urllib.parse.parse_qs(parsed.query)
         
         # Extraer datos básicos de la URL
-        codigo_postal = params.get('cp', ['N/A'])[0]
+       # codigo_postal = params.get('cp', ['N/A'])[0]
         precio = params.get('imp', ['N/A'])[0]
         energia_inicio = params.get('iniF', ['N/A'])[0]
         energia_fin = params.get('finF', ['N/A'])[0]
@@ -256,7 +255,7 @@ def extract_info_from_url(url):
         
         info = {
             'url': url,
-            'codigo_postal': codigo_postal,
+           #'codigo_postal': codigo_postal,
             'periodo': periodo,
             'tarifa': tarifa,
             'precio': float(precio) if precio != 'N/A' else 0,
