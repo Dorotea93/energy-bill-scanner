@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ Energy Bill Scanner</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2180a3;
+            --primary-dark: #1d7491;
+            --bg: #faf9f6;
+            --surface: #ffffff;
+            --text: #133459;
+            --text-secondary: #627c71;
+            --border: #e8e6e1;
+            --success: #208f8d;
+            --error: #c0152f;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 0;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 30px 20px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(33, 128, 163, 0.3);
+        }
+
+        header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        header p {
+            font-size: 14px;
+            opacity: 0.95;
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .card h2 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(33, 128, 163, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 12px 16px;
+            width: auto;
+            font-size: 13px;
+        }
+
+        .btn-secondary:hover {
+            background: #e8e8e8;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .alert {
+            padding: 14px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            animation: slideIn 0.3s ease-out;
+            border-left: 4px solid;
+        }
+
+        .alert.show {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .alert-success {
+            background: rgba(32, 143, 141, 0.1);
+            color: var(--success);
+            border-color: var(--success);
+        }
+
+        .alert-error {
+            background: rgba(192, 21, 47, 0.1);
+            color: var(--error);
+            border-color: var(--error);
+        }
+
+        .alert-info {
+            background: rgba(33, 128, 163, 0.1);
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .info-box {
+            background: rgba(33, 128, 163, 0.05);
+            border-left: 4px solid var(--primary);
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .steps {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .step {
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(33, 128, 163, 0.05);
+            border-radius: 8px;
+            align-items: flex-start;
+        }
+
+        .step-number {
+            background: var(--primary);
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        .step-text {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .step-text strong {
+            color: var(--text);
+        }
+
+        .success-message {
+            text-align: center;
+            padding: 20px;
+            background: rgba(32, 143, 141, 0.05);
+            border-radius: 8px;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        .success-message .icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .success-message h3 {
+            color: var(--success);
+            margin-bottom: 8px;
+        }
+
+        .success-message p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .modal-camera {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .modal-camera.active {
+            display: flex;
+        }
+
+        .camera-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 1;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+        }
+
+        .camera-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .camera-container canvas {
+            display: none;
+        }
+
+        .qr-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 250px;
+            height: 250px;
+            border: 3px solid rgba(33, 200, 163, 0.8);
+            border-radius: 8px;
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+        }
+
+        .qr-overlay::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 30px;
+            height: 30px;
+            border-top: 3px solid #22c5a3;
+            border-left: 3px solid #22c5a3;
+        }
+
+        .qr-overlay::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 30px;
+            height: 30px;
+            border-bottom: 3px solid #22c5a3;
+            border-right: 3px solid #22c5a3;
+        }
+
+        .camera-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 0 20px;
+        }
+
+        .camera-controls .btn {
+            width: auto;
+            min-width: 120px;
+            padding: 10px 16px;
+            font-size: 13px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .camera-controls .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .camera-status {
+            color: white;
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .scanner-hint {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.7);
+            text-align: center;
+            font-size: 13px;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 15px;
+            }
+
+            header {
+                padding: 20px 15px;
+            }
+
+            header h1 {
+                font-size: 24px;
+            }
+
+            .card {
+                padding: 16px;
+            }
+
+            .btn {
+                padding: 12px 16px;
+                font-size: 14px;
+            }
+
+            .camera-container {
+                max-width: 90vw;
+                max-height: 90vh;
+            }
+
+            .qr-overlay {
+                width: 200px;
+                height: 200px;
+            }
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>
+                <span>⚡</span>
+                Energy Bill Scanner
+            </h1>
+            <p>Escanea tu factura de energía</p>
+        </header>
+
+        <div class="alert alert-success" id="alertSuccess"></div>
+        <div class="alert alert-error" id="alertError"></div>
+        <div class="alert alert-info" id="alertInfo"></div>
+
+        <div class="card">
+            <h2>📱 Escanear QR</h2>
+
+            <div class="info-box">
+                ✓ Escanea el código QR de tu comparador de ofertas de energía
+            </div>
+
+            <button class="btn btn-primary" id="scanBtn" onclick="startScanning()">
+                <span>📷 Iniciar Scanner</span>
+            </button>
+        </div>
+
+        <div class="card">
+            <h2>📋 Cómo usar:</h2>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-text">
+                        Haz clic en <strong>"Iniciar Scanner"</strong>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-text">
+                        Permite el acceso a la <strong>cámara de tu móvil</strong>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-text">
+                        <strong>Escanea el código QR</strong> de la factura
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-text">
+                        ¡Automáticamente se envían los datos! <strong>Listo ✓</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="success-message" id="successMessage">
+            <div class="icon">✅</div>
+            <h3>¡Datos enviados exitosamente!</h3>
+            <p>Tu factura ha sido registrada en nuestra base de datos</p>
+        </div>
+
+        <div class="footer">
+            <p>💡 Tus datos se guardan de forma segura en nuestra base de datos</p>
+        </div>
+    </div>
+
+    <div class="modal-camera" id="cameraModal">
+        <div class="scanner-hint">Apunta el QR al centro del marco</div>
+        <div class="camera-container">
+            <video id="video" playsinline></video>
+            <canvas id="canvas"></canvas>
+            <div class="qr-overlay"></div>
+            <div class="camera-controls">
+                <button class="btn btn-secondary" onclick="stopScanning()">❌ Cerrar</button>
+            </div>
+        </div>
+        <div class="camera-status">
+            <div id="scanStatus">Buscando QR...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        let video = null;
+        let canvas = null;
+        let scanning = false;
+        let scannerRequestId = null;
+
+        async function startScanning() {
+            const cameraModal = document.getElementById('cameraModal');
+            video = document.getElementById('video');
+            canvas = document.getElementById('canvas');
+
+            cameraModal.classList.add('active');
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+
+                video.srcObject = stream;
+                scanning = true;
+                scanQRCode();
+            } catch (error) {
+                showAlert('❌ No se pudo acceder a la cámara: ' + error.message, 'error');
+                cameraModal.classList.remove('active');
+                scanning = false;
+            }
+        }
+
+        function stopScanning() {
+            scanning = false;
+            
+            if (video && video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+
+            if (scannerRequestId) {
+                cancelAnimationFrame(scannerRequestId);
+            }
+
+            document.getElementById('cameraModal').classList.remove('active');
+        }
+
+        function scanQRCode() {
+            if (!scanning || !video) return;
+
+            const ctx = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = window.jsQR(imageData.data, canvas.width, canvas.height);
+
+            if (code) {
+                const qrData = code.data;
+                
+                if (qrData.startsWith('https://comparador.cnmc.gob.es')) {
+                    processQRData(qrData);
+                    return;
+                }
+            }
+
+            scannerRequestId = requestAnimationFrame(scanQRCode);
+        }
+
+        async function processQRData(url) {
+            scanning = false;
+            
+            if (video && video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+
+            document.getElementById('cameraModal').classList.remove('active');
+            showAlert('⏳ Procesando datos...', 'info');
+
+            try {
+                const response = await fetch(`${API_URL}/scrape`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url: url })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error al procesar QR');
+                }
+
+                showAlert('✅ Datos extraídos y guardados correctamente', 'success');
+                document.getElementById('successMessage').classList.add('show');
+
+                setTimeout(() => {
+                    document.getElementById('successMessage').classList.remove('show');
+                }, 3000);
+
+            } catch (error) {
+                showAlert('❌ ' + error.message, 'error');
+            }
+        }
+
+        function showAlert(message, type) {
+            const alertElement = document.getElementById('alert' + capitalizeFirst(type));
+            
+            if (alertElement) {
+                alertElement.innerHTML = message;
+                alertElement.classList.add('show');
+                
+                if (type !== 'success') {
+                    setTimeout(() => alertElement.classList.remove('show'), 5000);
+                }
+            }
+        }
+
+        function capitalizeFirst(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const video = document.getElementById('video');
+            video.addEventListener('loadedmetadata', () => {
+                video.play();
+            });
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (scanning) {
+                stopScanning();
+            }
+        });
+    </script>
+</body>
+</html>
