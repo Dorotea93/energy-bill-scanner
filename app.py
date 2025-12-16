@@ -48,9 +48,16 @@ def scrape():
         if not url:
             return jsonify({'success': False, 'error': 'URL no proporcionada'}), 400
         
-        # Guardar en BD (solo URL y fecha)
         conn = sqlite3.connect('data/bills.db')
         c = conn.cursor()
+        
+        # Verificar si la URL ya existe
+        c.execute('SELECT id FROM bills WHERE url = ?', (url,))
+        if c.fetchone():
+            conn.close()
+            return jsonify({'success': False, 'error': 'Esta factura ya fue escaneada', 'duplicado': True}), 409
+        
+        # Guardar si no existe
         c.execute('''
             INSERT INTO bills (url, fecha_captura)
             VALUES (?, CURRENT_TIMESTAMP)
@@ -63,6 +70,7 @@ def scrape():
     except Exception as e:
         print(f'Error: {e}')
         return jsonify({'success': False, 'error': str(e)}), 500
+
 
 @app.route('/api/bills', methods=['GET'])
 def get_bills():
