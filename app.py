@@ -81,11 +81,11 @@ def scrape():
         print(f'Error: {e}')
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/api/download/excel', methods=['GET'])
-def download_excel():
+@app.route('/api/download/csv', methods=['GET'])
+def download_csv():
     try:
-        import openpyxl
-        from openpyxl.styles import Font, PatternFill, Alignment
+        import csv
+        from io import StringIO
         
         conn = sqlite3.connect('data/bills.db')
         c = conn.cursor()
@@ -93,62 +93,50 @@ def download_excel():
         bills = c.fetchall()
         conn.close()
         
-        # Crear workbook
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = "Facturas"
+        # Crear CSV en memoria
+        output = StringIO()
+        writer = csv.writer(output)
         
         # Encabezados
         headers = ['ID', 'Comercializadora', 'Periodo', 'Tarifa', 'Precio (€)', 
                    'Energía Verde', 'Permanencia', 'Revisión', 'Servicios', 
                    'Código Postal', 'Fecha Captura', 'URL']
-        
-        # Estilo encabezado
-        header_fill = PatternFill(start_color='667eea', end_color='667eea', fill_type='solid')
-        header_font = Font(bold=True, color='FFFFFF')
-        
-        for col_num, header in enumerate(headers, 1):
-            cell = ws.cell(row=1, column=col_num)
-            cell.value = header
-            cell.fill = header_fill
-            cell.font = header_font
-            cell.alignment = Alignment(horizontal='center')
+        writer.writerow(headers)
         
         # Datos
-        for row_num, bill in enumerate(bills, 2):
-            ws.cell(row=row_num, column=1).value = bill[0]  # ID
-            ws.cell(row=row_num, column=2).value = bill[11] if len(bill) > 11 else 'N/A'  # Comercializadora
-            ws.cell(row=row_num, column=3).value = bill[2] if len(bill) > 2 else 'N/A'  # Periodo
-            ws.cell(row=row_num, column=4).value = bill[3] if len(bill) > 3 else 'N/A'  # Tarifa
-            ws.cell(row=row_num, column=5).value = bill[4] if len(bill) > 4 else 0  # Precio
-            ws.cell(row=row_num, column=6).value = bill[5] if len(bill) > 5 else 'No'  # Energía verde
-            ws.cell(row=row_num, column=7).value = bill[6] if len(bill) > 6 else 'N/A'  # Permanencia
-            ws.cell(row=row_num, column=8).value = bill[7] if len(bill) > 7 else 'N/A'  # Revisión
-            ws.cell(row=row_num, column=9).value = bill[8] if len(bill) > 8 else 'N/A'  # Servicios
-            ws.cell(row=row_num, column=10).value = bill[1] if len(bill) > 1 else 'N/A'  # Código postal
-            ws.cell(row=row_num, column=11).value = bill[10] if len(bill) > 10 else 'N/A'  # Fecha captura
-            ws.cell(row=row_num, column=12).value = bill[9] if len(bill) > 9 else 'N/A'  # URL
+        for bill in bills:
+            row = [
+                bill[0],  # ID
+                bill[11] if len(bill) > 11 else 'N/A',  # Comercializadora
+                bill[2] if len(bill) > 2 else 'N/A',  # Periodo
+                bill[3] if len(bill) > 3 else 'N/A',  # Tarifa
+                bill[4] if len(bill) > 4 else 0,  # Precio
+                bill[5] if len(bill) > 5 else 'No',  # Energía verde
+                bill[6] if len(bill) > 6 else 'N/A',  # Permanencia
+                bill[7] if len(bill) > 7 else 'N/A',  # Revisión
+                bill[8] if len(bill) > 8 else 'N/A',  # Servicios
+                bill[1] if len(bill) > 1 else 'N/A',  # Código postal
+                bill[10] if len(bill) > 10 else 'N/A',  # Fecha captura
+                bill[9] if len(bill) > 9 else 'N/A'  # URL
+            ]
+            writer.writerow(row)
         
-        # Ajustar ancho columnas
-        for col in ws.columns:
-            ws.column_dimensions[col[0].column_letter].width = 20
-        
-        # Guardar
+        # Convertir a bytes
+        output_bytes = output.getvalue().encode('utf-8-sig')  # UTF-8 con BOM para Excel
         from io import BytesIO
-        output = BytesIO()
-        wb.save(output)
-        output.seek(0)
+        output = BytesIO(output_bytes)
         
         return send_file(
             output,
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            mimetype='text/csv; charset=utf-8',
             as_attachment=True,
-            download_name=f'facturas_energia_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+            download_name=f'facturas_energia_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
         )
     
     except Exception as e:
-        print(f'Error generando Excel: {e}')
+        print(f'Error generando CSV: {e}')
         return jsonify({'success': False, 'error': str(e)}), 500
+
 
 
 def extract_info_from_url(url):

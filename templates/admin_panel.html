@@ -199,6 +199,9 @@
             <div class="actions">
                 <button class="btn btn-primary" onclick="loadBills()">🔄 Actualizar</button>
                 <button class="btn btn-danger" onclick="deleteAll()">🗑️ Eliminar Todo</button>
+                <button class="btn btn--primary" onclick="downloadCSV()">📊 Descargar CSV</button>
+                <button class="btn btn--primary" onclick="downloadJSON()">📄 Descargar JSON</button>
+
             </div>
 
             <div id="billsContainer"></div>
@@ -323,6 +326,15 @@
 
         // Actualizar cada 5 segundos
         setInterval(loadBills, 5000);
+        function downloadCSV() {
+            window.location.href = '/api/download/csv';
+        }
+
+        function downloadJSON() {
+            window.location.href = '/api/download/json';
+        }
+
+        
     </script>
 </body>
 </html>
