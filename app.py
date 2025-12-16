@@ -1,4 +1,4 @@
-﻿﻿from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file
 from flask_cors import CORS
 import sqlite3
 from datetime import datetime
