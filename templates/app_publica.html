@@ -106,6 +106,12 @@
             box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
         }
 
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .btn-danger {
             background: #ef4444;
             color: white;
@@ -323,52 +329,88 @@
         }
 
         function startScanner() {
+            document.getElementById('startBtn').disabled = true;
             document.getElementById('startBtn').style.display = 'none';
             document.getElementById('stopBtn').style.display = 'block';
 
-            html5QrcodeScanner = new Html5Qrcode("reader");
-
-            const config = {
-                fps: 10,
-                qrbox: { width: 250, height: 250 },
-                aspectRatio: 1.0
-            };
-
-            const onScanSuccess = (decodedText, decodedResult) => {
-                console.log('QR detectado:', decodedText);
+            // Primero pedir permiso explícitamente
+            navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    facingMode: "environment",
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                } 
+            })
+            .then(stream => {
+                // Si tiene permiso, detener stream y iniciar scanner
+                stream.getTracks().forEach(track => track.stop());
                 
-                document.getElementById('resultValue').textContent = decodedText;
-                document.getElementById('resultDiv').style.display = 'block';
+                html5QrcodeScanner = new Html5Qrcode("reader");
 
-                stopScanner();
-                processQRCode(decodedText);
-            };
+                const config = {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 },
+                    aspectRatio: 1.0
+                };
 
-            const onScanFailure = (error) => {
-                // Silenciadamente fallar
-            };
+                const onScanSuccess = (decodedText, decodedResult) => {
+                    console.log('QR detectado:', decodedText);
+                    
+                    document.getElementById('resultValue').textContent = decodedText;
+                    document.getElementById('resultDiv').style.display = 'block';
 
-            html5QrcodeScanner.start(
-                { facingMode: "environment" },
-                config,
-                onScanSuccess,
-                onScanFailure
-            ).catch(err => {
-                showMessage('error', '❌ Error al acceder a la cámara: ' + err);
+                    stopScanner();
+                    processQRCode(decodedText);
+                };
+
+                const onScanFailure = (error) => {
+                    // Silenciadamente fallar
+                };
+
+                html5QrcodeScanner.start(
+                    { facingMode: "environment" },
+                    config,
+                    onScanSuccess,
+                    onScanFailure
+                ).catch(err => {
+                    console.error('Error al iniciar scanner:', err);
+                    showMessage('error', '❌ Error al iniciar scanner: ' + err.message);
+                    document.getElementById('startBtn').style.display = 'block';
+                    document.getElementById('startBtn').disabled = false;
+                    document.getElementById('stopBtn').style.display = 'none';
+                });
+
+                showMessage('info', 'ℹ️ Escanea el código QR...');
+            })
+            .catch(err => {
+                console.error('Error de permiso:', err);
+                let errorMsg = '❌ Error al acceder a la cámara';
+                
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    errorMsg = '❌ Permiso denegado. Por favor, pulsa "Permitir" cuando se solicite acceso a la cámara. Luego intenta de nuevo.';
+                } else if (err.name === 'NotFoundError') {
+                    errorMsg = '❌ No se encontró cámara en tu dispositivo.';
+                } else if (err.name === 'NotReadableError') {
+                    errorMsg = '❌ La cámara está siendo usada por otra aplicación.';
+                }
+                
+                showMessage('error', errorMsg);
                 document.getElementById('startBtn').style.display = 'block';
+                document.getElementById('startBtn').disabled = false;
                 document.getElementById('stopBtn').style.display = 'none';
             });
-
-            showMessage('info', 'ℹ️ Escanea el código QR...');
         }
 
         function stopScanner() {
             if (html5QrcodeScanner) {
                 html5QrcodeScanner.stop().then(() => {
                     document.getElementById('startBtn').style.display = 'block';
+                    document.getElementById('startBtn').disabled = false;
                     document.getElementById('stopBtn').style.display = 'none';
                 }).catch(err => {
                     console.error('Error al detener scanner:', err);
+                    document.getElementById('startBtn').style.display = 'block';
+                    document.getElementById('startBtn').disabled = false;
                 });
             }
         }
