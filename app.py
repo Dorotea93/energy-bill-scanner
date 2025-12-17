@@ -15,18 +15,12 @@ CORS(app)
 if not os.path.exists('data'):
     os.makedirs('data')
 
-# ⭐ LIMPIAR BD VIEJA AL INICIAR
-if os.path.exists('data/bills.db'):
-    try:
-        os.remove('data/bills.db')
-        print("✓ Base de datos antigua eliminada")
-    except Exception as e:
-        print(f"Error al limpiar BD: {e}")
-
 # Inicializar base de datos
 def init_db():
     conn = sqlite3.connect('data/bills.db')
     c = conn.cursor()
+    
+    # Crear tabla (DROP solo si queremos limpiar - COMENTADO)
     c.execute('''
         CREATE TABLE IF NOT EXISTS bills (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,30 +33,10 @@ def init_db():
     ''')
     conn.commit()
     conn.close()
+    print("✓ Base de datos inicializada correctamente")
 
-# Inicializar base de datos
-def init_db():
-    conn = sqlite3.connect('data/bills.db')
-    c = conn.cursor()
-    
-    # Eliminar tabla vieja si existe
-    c.execute('DROP TABLE IF EXISTS bills')
-    
-    # Crear tabla nueva con todas las columnas
-    c.execute('''
-        CREATE TABLE bills (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT,
-            apellido TEXT,
-            email TEXT,
-            url TEXT NOT NULL,
-            fecha_captura TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
-
+# Ejecutar al iniciar
+init_db()
 
 @app.route('/')
 def index():
@@ -137,6 +111,7 @@ def get_bills():
         return jsonify(bills)
     
     except Exception as e:
+        print(f'Error: {e}')
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/bills/<int:bill_id>', methods=['DELETE'])
