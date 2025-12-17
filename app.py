@@ -70,6 +70,32 @@ def index():
 def admin():
     return render_template('admin_panel.html')
 
+@app.route('/api/check-qr', methods=['POST'])
+def check_qr():
+    try:
+        data = request.json
+        url = data.get('url')
+
+        if not url:
+            return jsonify({'success': False, 'error': 'URL no proporcionada'}), 400
+
+        conn = sqlite3.connect('data/bills.db')
+        c = conn.cursor()
+
+        # Verificar si la URL ya existe
+        c.execute('SELECT id FROM bills WHERE url = ?', (url,))
+        existe = c.fetchone()
+        conn.close()
+
+        if existe:
+            return jsonify({'existe': True, 'id': existe[0]})
+        else:
+            return jsonify({'existe': False})
+
+    except Exception as e:
+        print(f'Error en /api/check-qr: {e}')
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/scrape', methods=['POST'])
 def scrape():
     try:
