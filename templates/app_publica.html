@@ -314,7 +314,7 @@
             </div>
             
             <div class="video-container">
-                <video id="video" autoplay playsinline></video>
+                <video id="video" autoplay playsinline webkit-playsinline></video>
                 
                 <!-- GUÍA VISUAL DEL QR -->
                 <div class="qr-guide">
@@ -370,30 +370,188 @@
         let stream = null;
         let scannedQRCodes = [];
 
+        // Detectar navegador y sistema operativo
+        function detectAndroid() {
+            return /Android/i.test(navigator.userAgent);
+        }
+
+        // Forzar solicitud de permiso de cámara sin restricciones
+        async function requestCameraPermissionWithFallback() {
+            try {
+                // Intentar obtener cámara con configuración para Android compatible
+                const constraints = { 
+                    video: { 
+                        facingMode: { ideal: 'environment' },
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        aspectRatio: { ideal: 1 }
+                    },
+                    audio: false
+                };
+
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                return { success: true, stream: stream };
+
+            } catch (error) {
+                console.error('Error con constrains avanzados:', error);
+
+                // Fallback 1: Intentar sin especificar facingMode
+                try {
+                    const basicConstraints = { 
+                        video: {
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        },
+                        audio: false
+                    };
+
+                    stream = await navigator.mediaDevices.getUserMedia(basicConstraints);
+                    return { success: true, stream: stream };
+
+                } catch (error2) {
+                    console.error('Error con constrains básicos:', error2);
+
+                    // Fallback 2: Intentar con mínimas restricciones
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia({ 
+                            video: true,
+                            audio: false
+                        });
+                        return { success: true, stream: stream };
+
+                    } catch (finalError) {
+                        // Error final: determinar tipo de error
+                        if (finalError.name === 'NotAllowedError') {
+                            return { 
+                                success: false, 
+                                errorType: 'permission_denied',
+                                message: 'Permiso de cámara denegado por el usuario'
+                            };
+                        } else if (finalError.name === 'NotFoundError') {
+                            return { 
+                                success: false, 
+                                errorType: 'no_camera',
+                                message: 'No se encontró cámara en el dispositivo'
+                            };
+                        } else if (finalError.name === 'NotReadableError') {
+                            return { 
+                                success: false, 
+                                errorType: 'camera_in_use',
+                                message: 'La cámara está siendo usada por otra aplicación'
+                            };
+                        } else if (finalError.name === 'SecurityError') {
+                            return { 
+                                success: false, 
+                                errorType: 'security_error',
+                                message: 'Acceso a cámara bloqueado por restricciones de seguridad'
+                            };
+                        } else {
+                            return { 
+                                success: false, 
+                                errorType: 'unknown',
+                                message: finalError.message || 'Error desconocido al acceder a la cámara'
+                            };
+                        }
+                    }
+                }
+            }
+        }
+
         async function startCamera() {
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        facingMode: 'environment',
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    } 
-                });
+                document.getElementById('startBtn').disabled = true;
+                
+                // Solicitar permiso de cámara con fallbacks
+                const result = await requestCameraPermissionWithFallback();
+
+                if (!result.success) {
+                    handleCameraError(result);
+                    document.getElementById('startBtn').disabled = false;
+                    return;
+                }
+
+                // Si llegamos aquí, tenemos acceso a la cámara
                 video.srcObject = stream;
+
+                // Esperar a que el video esté listo
                 video.onloadedmetadata = () => {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    isScanning = true;
-                    document.getElementById('startBtn').disabled = true;
-                    document.getElementById('cameraStatus').style.display = 'flex';
-                    document.getElementById('statusMessage').textContent = 'Aún no se ha detectado ningún código QR. Inicia la cámara e intenta escanear.';
-                    document.getElementById('resultContainer').classList.add('hidden');
-                    document.getElementById('noResultText').classList.remove('hidden');
-                    scan();
+                    try {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        isScanning = true;
+                        
+                        document.getElementById('cameraStatus').style.display = 'flex';
+                        document.getElementById('statusMessage').textContent = 'Escaneando... Alinea el código QR dentro del recuadro azul';
+                        document.getElementById('resultContainer').classList.add('hidden');
+                        document.getElementById('noResultText').classList.add('hidden');
+                        
+                        scan();
+                    } catch (err) {
+                        console.error('Error al inicializar canvas:', err);
+                        alert('Error al inicializar el scanner: ' + err.message);
+                        document.getElementById('startBtn').disabled = false;
+                    }
                 };
+
+                // Manejo de errores del video
+                video.onerror = (error) => {
+                    console.error('Error en el elemento video:', error);
+                    alert('Error en la reproducción de video');
+                    stopCamera();
+                };
+
             } catch (error) {
-                alert('Error al acceder a la cámara: ' + error.message);
+                console.error('Error general en startCamera:', error);
+                alert('Error inesperado: ' + error.message);
+                document.getElementById('startBtn').disabled = false;
             }
+        }
+
+        function handleCameraError(errorResult) {
+            document.getElementById('resultContainer').classList.remove('hidden');
+            document.getElementById('noResultText').classList.add('hidden');
+            
+            let errorTitle = '';
+            let errorMessage = '';
+
+            switch(errorResult.errorType) {
+                case 'permission_denied':
+                    errorTitle = '❌ Permiso de Cámara Denegado';
+                    errorMessage = `
+                        <strong>Solución:</strong><br>
+                        1. Ve a <strong>Configuración</strong><br>
+                        2. Aplicaciones → ${detectAndroid() ? 'Permiso' : 'Aplicaciones'}<br>
+                        3. Busca tu navegador (Chrome, Firefox, etc.)<br>
+                        4. Clic en <strong>Permisos</strong><br>
+                        5. Activa <strong>Cámara</strong><br>
+                        6. Regresa e intenta de nuevo
+                    `;
+                    break;
+                case 'no_camera':
+                    errorTitle = '❌ Cámara No Detectada';
+                    errorMessage = 'Tu dispositivo no tiene cámara disponible.';
+                    break;
+                case 'camera_in_use':
+                    errorTitle = '❌ Cámara en Uso';
+                    errorMessage = 'La cámara está siendo utilizada por otra aplicación. Ciérrala e intenta de nuevo.';
+                    break;
+                case 'security_error':
+                    errorTitle = '❌ Error de Seguridad';
+                    errorMessage = 'El acceso a la cámara está bloqueado por restricciones de seguridad.';
+                    break;
+                default:
+                    errorTitle = '❌ Error General';
+                    errorMessage = errorResult.message || 'No se pudo acceder a la cámara.';
+            }
+
+            document.getElementById('status').textContent = errorTitle;
+            document.getElementById('status').classList.add('error');
+            document.getElementById('status').classList.remove('success');
+            
+            document.getElementById('qrData').innerHTML = errorMessage;
+            document.getElementById('qrData').classList.add('error');
+            
+            document.getElementById('processingStatus').innerHTML = '-';
         }
 
         function stopCamera() {
@@ -401,21 +559,28 @@
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
             }
+            stream = null;
+            video.srcObject = null;
             document.getElementById('startBtn').disabled = false;
             document.getElementById('cameraStatus').style.display = 'none';
         }
 
         function scan() {
             if (isScanning) {
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                let code = jsQR(imageData.data, imageData.width, imageData.height);
+                try {
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                    let code = jsQR(imageData.data, imageData.width, imageData.height);
 
-                if (code) {
-                    displayResult(code);
+                    if (code) {
+                        displayResult(code);
+                    }
+
+                    requestAnimationFrame(scan);
+                } catch (error) {
+                    console.error('Error en scan:', error);
+                    requestAnimationFrame(scan);
                 }
-
-                requestAnimationFrame(scan);
             }
         }
 
