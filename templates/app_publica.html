@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Energy Bill Scanner</title>
-    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://unpkg.com/html5-qrcode@1.0.9/minified/html5-qrcode.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -73,6 +73,7 @@
 
         #reader {
             width: 100%;
+            aspect-ratio: 1;
             border-radius: 15px;
             overflow: hidden;
             background: #000;
@@ -81,7 +82,8 @@
 
         #reader video {
             width: 100%;
-            height: auto;
+            height: 100%;
+            object-fit: cover;
         }
 
         .btn {
@@ -262,7 +264,8 @@
             }
 
             #reader {
-                height: 300px;
+                width: 100%;
+                aspect-ratio: 1;
             }
         }
     </style>
@@ -337,12 +340,12 @@
             navigator.mediaDevices.getUserMedia({ 
                 video: { 
                     facingMode: "environment",
-                    width: { ideal: 1280 },
+                    width: { ideal: 720 },
                     height: { ideal: 720 }
                 } 
             })
             .then(stream => {
-                // Si tiene permiso, detener stream y iniciar scanner
+                // Si tiene permiso, detener stream e iniciar scanner
                 stream.getTracks().forEach(track => track.stop());
                 
                 html5QrcodeScanner = new Html5Qrcode("reader");
@@ -368,7 +371,12 @@
                 };
 
                 html5QrcodeScanner.start(
-                    { facingMode: "environment" },
+                    { 
+                        facingMode: "environment",
+                        width: { ideal: 720 },
+                        height: { ideal: 720 },
+                        aspectRatio: 1.0
+                    },
                     config,
                     onScanSuccess,
                     onScanFailure
