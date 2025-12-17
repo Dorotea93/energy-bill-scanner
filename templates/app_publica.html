@@ -45,6 +45,16 @@
             margin-bottom: 20px;
         }
 
+        .camera-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--color-text);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
         .video-container {
             position: relative;
             width: 100%;
@@ -283,6 +293,10 @@
         <p style="text-align: center; font-size: 13px; color: var(--color-text); margin: -15px 0 20px 0;">Escanea el código QR de tu comparador de ofertas vigentes de las comercializadoras de energía eléctrica</p>
 
         <div class="scanner-section">
+            <div class="camera-label" id="cameraStatus" style="display: none;">
+                <span id="statusMessage">Aún no se ha detectado ningún código QR. Inicia la cámara e intenta escanear.</span>
+            </div>
+            
             <div class="video-container">
                 <video id="video" autoplay playsinline></video>
                 
@@ -355,6 +369,8 @@
                     canvas.height = video.videoHeight;
                     isScanning = true;
                     document.getElementById('startBtn').disabled = true;
+                    document.getElementById('cameraStatus').style.display = 'flex';
+                    document.getElementById('statusMessage').textContent = 'Aún no se ha detectado ningún código QR. Inicia la cámara e intenta escanear.';
                     document.getElementById('resultContainer').classList.add('hidden');
                     document.getElementById('noResultText').classList.remove('hidden');
                     scan();
@@ -370,6 +386,7 @@
                 stream.getTracks().forEach(track => track.stop());
             }
             document.getElementById('startBtn').disabled = false;
+            document.getElementById('cameraStatus').style.display = 'none';
         }
 
         function scan() {
@@ -387,6 +404,17 @@
         }
 
         function displayResult(code) {
+            // Obtener el estado del resultado
+            let statusText = '';
+            if (scannedQRCodes.includes(code.data)) {
+                statusText = '⚠️ QR Duplicado';
+            } else {
+                statusText = '✓ QR Detectado';
+            }
+            
+            // Actualizar el mensaje encima del cuadrado de la cámara
+            document.getElementById('statusMessage').textContent = statusText;
+
             // Verificar si el QR ya ha sido escaneado
             if (scannedQRCodes.includes(code.data)) {
                 document.getElementById('resultContainer').classList.remove('hidden');
