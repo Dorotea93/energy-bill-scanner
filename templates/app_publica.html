@@ -3,8 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>APP Pública</title>
+    <title>Energy Bill Scanner</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <style>
+        :root {
+            --color-primary: #32b8c6;
+            --color-bg: #fcfcf9;
+            --color-text: #134252;
+            --color-border: #5e5240;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -12,74 +20,186 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--color-bg);
+            color: var(--color-text);
             padding: 20px;
         }
 
         .container {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-            padding: 30px;
-            max-width: 500px;
-            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
         }
 
         h1 {
-            color: #333;
+            font-size: 24px;
             margin-bottom: 20px;
             text-align: center;
+        }
+
+        .scanner-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(94, 82, 64, 0.2);
+            margin-bottom: 20px;
+        }
+
+        .camera-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--color-text);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .video-container {
             position: relative;
             width: 100%;
+            aspect-ratio: 1 / 1;
             background: #000;
-            border-radius: 10px;
+            border-radius: 8px;
             overflow: hidden;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
-        video {
+        #video {
             width: 100%;
-            height: auto;
+            height: 100%;
+            object-fit: cover;
             display: block;
         }
 
-        canvas {
-            display: none;
+        /* LÍMITES VISUALES DEL QR */
+        .qr-guide {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 280px;
+            height: 280px;
+            border: 3px solid var(--color-primary);
+            border-radius: 12px;
+            background: transparent;
+            box-shadow: 
+                inset 0 0 20px rgba(50, 184, 198, 0.3),
+                0 0 30px rgba(50, 184, 198, 0.4);
+            pointer-events: none;
+            z-index: 10;
+            animation: pulse-border 2s ease-in-out infinite;
+        }
+
+        .qr-guide::before {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: -3px;
+            right: -3px;
+            bottom: -3px;
+            border: 2px solid rgba(50, 184, 198, 0.2);
+            border-radius: 12px;
+            animation: rotate-guide 8s linear infinite;
+        }
+
+        .qr-guide-label {
+            position: absolute;
+            top: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--color-primary);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            z-index: 11;
+        }
+
+        .qr-guide-label::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid var(--color-primary);
+        }
+
+        /* Esquinas destacadas */
+        .qr-corner {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--color-primary);
+        }
+
+        .qr-corner-top-left {
+            top: -3px;
+            left: -3px;
+            border-right: none;
+            border-bottom: none;
+        }
+
+        .qr-corner-top-right {
+            top: -3px;
+            right: -3px;
+            border-left: none;
+            border-bottom: none;
+        }
+
+        .qr-corner-bottom-left {
+            bottom: -3px;
+            left: -3px;
+            border-right: none;
+            border-top: none;
+        }
+
+        .qr-corner-bottom-right {
+            bottom: -3px;
+            right: -3px;
+            border-left: none;
+            border-top: none;
+        }
+
+        @keyframes pulse-border {
+            0%, 100% { box-shadow: inset 0 0 20px rgba(50, 184, 198, 0.3), 0 0 30px rgba(50, 184, 198, 0.4); }
+            50% { box-shadow: inset 0 0 30px rgba(50, 184, 198, 0.5), 0 0 40px rgba(50, 184, 198, 0.6); }
+        }
+
+        @keyframes rotate-guide {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         .controls {
             display: flex;
             gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
+            margin-bottom: 15px;
         }
 
         button {
             flex: 1;
             padding: 12px;
-            background: #667eea;
+            background: var(--color-primary);
             color: white;
             border: none;
             border-radius: 8px;
+            font-weight: 600;
             cursor: pointer;
             font-size: 14px;
-            font-weight: bold;
             transition: all 0.3s ease;
-            min-width: 120px;
         }
 
         button:hover {
-            background: #764ba2;
+            background: #2a9fab;
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 12px rgba(50, 184, 198, 0.3);
         }
 
         button:active {
@@ -92,180 +212,284 @@
             transform: none;
         }
 
-        .info {
-            background: #f0f0f0;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 15px;
-            font-size: 14px;
-            color: #666;
-            text-align: center;
+        .result-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(94, 82, 64, 0.2);
         }
 
-        .redirect-banner {
-            background: #fff3cd;
-            border: 1px solid #ffc107;
-            color: #856404;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            text-align: center;
+        .result-item {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(94, 82, 64, 0.1);
+        }
+
+        .result-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .result-label {
+            font-weight: 600;
+            font-size: 12px;
+            color: var(--color-primary);
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .result-value {
             font-size: 14px;
+            word-break: break-all;
+        }
+
+        .result-value.success {
+            color: #2a9fab;
+            font-weight: 500;
+        }
+
+        .result-value.error {
+            color: #c01527;
+        }
+
+        .info-box {
+            background: rgba(50, 184, 198, 0.1);
+            border-left: 4px solid var(--color-primary);
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-top: 15px;
+            color: var(--color-text);
+        }
+
+        .info-box strong {
+            color: var(--color-primary);
+        }
+
+        .hidden {
             display: none;
         }
 
-        .redirect-banner.show {
-            display: block;
+        .spinner {
+            border: 3px solid rgba(50, 184, 198, 0.3);
+            border-top: 3px solid var(--color-primary);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 20px;
+            }
+
+            .qr-guide {
+                width: 240px;
+                height: 240px;
+            }
+
+            .scanner-section {
+                padding: 15px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="redirect-banner" id="redirectBanner">
-            ℹ️ Por favor, abre este enlace en <strong>Chrome</strong> o <strong>Safari</strong> para acceso a cámara
-        </div>
-        
-        <h1>📷 APP Pública</h1>
-        
-        <div class="video-container">
-            <video id="video" playsinline></video>
+        <h1>⚡ Energy Bill Scanner</h1>
+        <p style="text-align: center; font-size: 13px; color: var(--color-text); margin: -15px 0 20px 0;">Escanea el código QR de tu comparador de ofertas vigentes de las comercializadoras de energía eléctrica</p>
+
+        <div class="scanner-section">
+            <div class="camera-label" id="cameraStatus" style="display: none;">
+                <span id="statusMessage">Aún no se ha detectado ningún código QR. Inicia la cámara e intenta escanear.</span>
+            </div>
+            
+            <div class="video-container">
+                <video id="video" autoplay playsinline></video>
+                
+                <!-- GUÍA VISUAL DEL QR -->
+                <div class="qr-guide">
+                    <div class="qr-guide-label">Coloca el QR aquí</div>
+                    <div class="qr-corner qr-corner-top-left"></div>
+                    <div class="qr-corner qr-corner-top-right"></div>
+                    <div class="qr-corner qr-corner-bottom-left"></div>
+                    <div class="qr-corner qr-corner-bottom-right"></div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button id="startBtn" onclick="startCamera()">📷 Iniciar Scanner</button>
+            </div>
+
+            <div class="info-box">
+                <strong>📋 Cómo usar:</strong>
+                <ol style="margin: 8px 0 0 20px; padding: 0;">
+                    <li>Haz click en <strong>Iniciar Scanner</strong></li>
+                    <li>Permite acceso a la cámara de tu móvil</li>
+                    <li>Alinea el código QR dentro del recuadro azul</li>
+                </ol>
+            </div>
         </div>
 
-        <canvas id="canvas"></canvas>
-
-        <div class="controls">
-            <button id="startBtn">Iniciar Cámara</button>
-            <button id="captureBtn" disabled>Capturar Foto</button>
-            <button id="stopBtn" disabled>Detener</button>
-        </div>
-
-        <div class="info">
-            <p>Acceso a cámara desde dispositivo móvil o escritorio</p>
+        <div class="result-section">
+            <h2 style="font-size: 16px; margin-bottom: 15px;">Resultado del Escaneo</h2>
+            <div id="resultContainer" class="hidden">
+                <div class="result-item">
+                    <div class="result-label">Estado</div>
+                    <div id="status" class="result-value"></div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Código QR Detectado</div>
+                    <div id="qrData" class="result-value"></div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Procesando</div>
+                    <div id="processingStatus" class="result-value"></div>
+                </div>
+            </div>
+            <div id="noResultText" style="color: var(--color-text); font-size: 14px;">
+                Aún no se ha detectado ningún código QR. Inicia la cámara e intenta escanear.
+            </div>
         </div>
     </div>
 
     <script>
-        // ==========================================
-        // DETECCIÓN DE NAVEGADOR Y REDIRECCIÓN
-        // ==========================================
-        
-        function detectBrowser() {
-            const ua = navigator.userAgent.toLowerCase();
-            
-            // Detectar si es navegador de aplicación (WhatsApp, Telegram, etc.)
-            const isInApp = /whatsapp|telegram|fb_iab|twitter|instagram|line|kakao|viber/i.test(ua);
-            
-            // Detectar navegadores seguros
-            const isChrome = /chrome|crios|chromium/i.test(ua) && !/edg/i.test(ua);
-            const isSafari = /safari|version/i.test(ua) && /mobile|iphone|ipad/i.test(ua) && !/chrome/i.test(ua);
-            const isChromium = /edg/i.test(ua); // Edge basado en Chromium
-            
-            return {
-                isInApp: isInApp,
-                isChrome: isChrome,
-                isSafari: isSafari,
-                isChromium: isChromium,
-                isMobile: /mobile|android|iphone|ipad/i.test(ua)
-            };
-        }
-
-        function redirectToBrowser() {
-            const currentUrl = window.location.href;
-            const browser = detectBrowser();
-
-            // Si está en una app y es móvil, intentar redireccionar
-            if (browser.isInApp && browser.isMobile) {
-                // Chrome en Android
-                const chromeUrl = `intent://${currentUrl.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;end`;
-                
-                // Safari en iOS
-                const safariUrl = `x-web-search://?${encodeURIComponent(currentUrl)}`;
-
-                if (/android/i.test(navigator.userAgent)) {
-                    // Intentar abrir en Chrome en Android
-                    window.location.href = chromeUrl;
-                } else if (/iphone|ipad/i.test(navigator.userAgent)) {
-                    // Para iOS, mostrar banner informativo
-                    showRedirectBanner();
-                }
-            } else if (browser.isMobile && !browser.isChrome && !browser.isSafari && !browser.isChromium) {
-                // Si es móvil pero no es navegador seguro
-                showRedirectBanner();
-            }
-        }
-
-        function showRedirectBanner() {
-            const banner = document.getElementById('redirectBanner');
-            banner.classList.add('show');
-        }
-
-        // Ejecutar redirección al cargar
-        document.addEventListener('DOMContentLoaded', redirectToBrowser);
-
-        // ==========================================
-        // FUNCIONALIDAD ORIGINAL DE CÁMARA
-        // ==========================================
-
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const startBtn = document.getElementById('startBtn');
-        const captureBtn = document.getElementById('captureBtn');
-        const stopBtn = document.getElementById('stopBtn');
-
+        let video = document.getElementById('video');
+        let canvas = document.createElement('canvas');
+        let context = canvas.getContext('2d');
+        let isScanning = false;
         let stream = null;
+        let scannedQRCodes = [];
 
-        startBtn.addEventListener('click', async () => {
+        async function startCamera() {
             try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'user' },
-                    audio: false
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
                 });
-
                 video.srcObject = stream;
-                video.play();
-
-                startBtn.disabled = true;
-                captureBtn.disabled = false;
-                stopBtn.disabled = false;
-
-                console.log('Cámara iniciada correctamente');
+                video.onloadedmetadata = () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    isScanning = true;
+                    document.getElementById('startBtn').disabled = true;
+                    document.getElementById('cameraStatus').style.display = 'flex';
+                    document.getElementById('statusMessage').textContent = 'Aún no se ha detectado ningún código QR. Inicia la cámara e intenta escanear.';
+                    document.getElementById('resultContainer').classList.add('hidden');
+                    document.getElementById('noResultText').classList.remove('hidden');
+                    scan();
+                };
             } catch (error) {
-                console.error('Error al acceder a la cámara:', error);
-                alert('No se pudo acceder a la cámara. Por favor, verifica los permisos.');
+                alert('Error al acceder a la cámara: ' + error.message);
             }
-        });
+        }
 
-        captureBtn.addEventListener('click', () => {
-            const context = canvas.getContext('2d');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            context.drawImage(video, 0, 0);
-
-            const image = canvas.toDataURL('image/png');
-            console.log('Foto capturada:', image);
-
-            // Descargar la imagen
-            const link = document.createElement('a');
-            link.href = image;
-            link.download = `captura-${Date.now()}.png`;
-            link.click();
-
-            alert('Foto capturada y descargada');
-        });
-
-        stopBtn.addEventListener('click', () => {
+        function stopCamera() {
+            isScanning = false;
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
             }
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('cameraStatus').style.display = 'none';
+        }
 
-            video.srcObject = null;
+        function scan() {
+            if (isScanning) {
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                let code = jsQR(imageData.data, imageData.width, imageData.height);
 
-            startBtn.disabled = false;
-            captureBtn.disabled = true;
-            stopBtn.disabled = true;
+                if (code) {
+                    displayResult(code);
+                }
 
-            console.log('Cámara detenida');
-        });
+                requestAnimationFrame(scan);
+            }
+        }
+
+        function displayResult(code) {
+            let statusText = '';
+            if (scannedQRCodes.includes(code.data)) {
+                statusText = '⚠️ QR Duplicado';
+            } else {
+                statusText = '✓ QR Detectado';
+            }
+            
+            document.getElementById('statusMessage').textContent = statusText;
+
+            // Verificar si el QR ya ha sido escaneado
+            if (scannedQRCodes.includes(code.data)) {
+                document.getElementById('resultContainer').classList.remove('hidden');
+                document.getElementById('noResultText').classList.add('hidden');
+                
+                document.getElementById('status').textContent = '⚠️ QR Duplicado';
+                document.getElementById('status').classList.remove('success');
+                document.getElementById('status').classList.add('error');
+                document.getElementById('qrData').textContent = 'Este QR ya ha sido escaneado. No se puede escanear códigos duplicados.';
+                document.getElementById('qrData').classList.add('error');
+                document.getElementById('processingStatus').innerHTML = '-';
+                
+                stopCamera();
+                return;
+            }
+
+            // Si es un QR nuevo, agregarlo al array
+            scannedQRCodes.push(code.data);
+
+            document.getElementById('resultContainer').classList.remove('hidden');
+            document.getElementById('noResultText').classList.add('hidden');
+            
+            document.getElementById('status').textContent = '✓ QR Detectado';
+            document.getElementById('status').classList.add('success');
+            document.getElementById('qrData').textContent = code.data;
+            document.getElementById('qrData').classList.remove('error');
+            document.getElementById('processingStatus').innerHTML = '<span class="spinner"></span>Enviando al administrador...';
+            
+            // Detener el scanner
+            stopCamera();
+
+            // AQUÍ ENVIAMOS LA URL AL ADMINISTRADOR
+            sendQRToAdmin(code.data);
+        }
+
+        // Función para enviar la URL al administrador
+        async function sendQRToAdmin(qrUrl) {
+            try {
+                const response = await fetch('/api/scrape', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url: qrUrl })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('processingStatus').innerHTML = '✓ Enviado correctamente al administrador';
+                    document.getElementById('processingStatus').classList.add('success');
+                } else {
+                    document.getElementById('processingStatus').innerHTML = '❌ Error: ' + (data.error || 'No se pudo enviar');
+                    document.getElementById('processingStatus').classList.add('error');
+                }
+            } catch (error) {
+                console.error('Error al enviar:', error);
+                document.getElementById('processingStatus').innerHTML = '❌ Error de conexión: ' + error.message;
+                document.getElementById('processingStatus').classList.add('error');
+            }
+        }
     </script>
 </body>
 </html>
