@@ -353,24 +353,30 @@
         }
 
         function startScanner() {
-            document.getElementById('startBtn').disabled = true;
-            document.getElementById('startBtn').style.display = 'none';
-            document.getElementById('stopBtn').style.display = 'block';
+    document.getElementById('startBtn').disabled = true;
+    document.getElementById('startBtn').style.display = 'none';
+    document.getElementById('stopBtn').style.display = 'block';
+    showMessage('info', 'ℹ️ Cargando librería...');
 
-            // Verificar que la librería esté disponible
-            waitForLibrary(() => {
-                // Primero pedir permiso explícitamente
-                navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        facingMode: "environment",
-                        width: { ideal: 720 },
-                        height: { ideal: 720 }
-                    } 
-                })
-                .then(stream => {
-                    // Si tiene permiso, detener stream e iniciar scanner
-                    stream.getTracks().forEach(track => track.stop());
-                    
+    // Esperar más tiempo a que la librería cargue
+    let attempts = 0;
+    const maxAttempts = 30; // 3 segundos
+    
+    const tryStartScanner = () => {
+        if (typeof Html5Qrcode !== 'undefined') {
+            console.log('✓ Html5Qrcode disponible, iniciando...');
+            
+            navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    facingMode: "environment",
+                    width: { ideal: 720 },
+                    height: { ideal: 720 }
+                } 
+            })
+            .then(stream => {
+                stream.getTracks().forEach(track => track.stop());
+                
+                try {
                     html5QrcodeScanner = new Html5Qrcode("reader");
 
                     const config = {
@@ -405,33 +411,56 @@
                         onScanFailure
                     ).catch(err => {
                         console.error('Error al iniciar scanner:', err);
-                        showMessage('error', '❌ Error al iniciar scanner: ' + err.message);
+                        showMessage('error', '❌ Error: ' + err.message);
                         document.getElementById('startBtn').style.display = 'block';
                         document.getElementById('startBtn').disabled = false;
                         document.getElementById('stopBtn').style.display = 'none';
                     });
 
                     showMessage('info', 'ℹ️ Escanea el código QR...');
-                })
-                .catch(err => {
-                    console.error('Error de permiso:', err);
-                    let errorMsg = '❌ Error al acceder a la cámara';
-                    
-                    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                        errorMsg = '❌ Permiso denegado. Por favor, pulsa "Permitir" cuando se solicite acceso a la cámara. Luego intenta de nuevo.';
-                    } else if (err.name === 'NotFoundError') {
-                        errorMsg = '❌ No se encontró cámara en tu dispositivo.';
-                    } else if (err.name === 'NotReadableError') {
-                        errorMsg = '❌ La cámara está siendo usada por otra aplicación.';
-                    }
-                    
-                    showMessage('error', errorMsg);
+                } catch (e) {
+                    console.error('Error al crear Html5Qrcode:', e);
+                    showMessage('error', '❌ Error: ' + e.message);
                     document.getElementById('startBtn').style.display = 'block';
                     document.getElementById('startBtn').disabled = false;
                     document.getElementById('stopBtn').style.display = 'none';
-                });
+                }
+            })
+            .catch(err => {
+                console.error('Error de permiso:', err);
+                let errorMsg = '❌ Error al acceder a la cámara';
+                
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    errorMsg = '❌ Permiso denegado. Intenta de nuevo.';
+                } else if (err.name === 'NotFoundError') {
+                    errorMsg = '❌ No se encontró cámara.';
+                } else if (err.name === 'NotReadableError') {
+                    errorMsg = '❌ La cámara está en uso.';
+                }
+                
+                showMessage('error', errorMsg);
+                document.getElementById('startBtn').style.display = 'block';
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').style.display = 'none';
             });
+        } else {
+            attempts++;
+            if (attempts < maxAttempts) {
+                console.log(`Esperando librería... ${attempts}/${maxAttempts}`);
+                setTimeout(tryStartScanner, 100);
+            } else {
+                console.error('Librería no cargó');
+                showMessage('error', '❌ Error: Librería no disponible. Recarga la página.');
+                document.getElementById('startBtn').style.display = 'block';
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').style.display = 'none';
+            }
         }
+    };
+    
+    tryStartScanner();
+}
+
 
         function stopScanner() {
             if (html5QrcodeScanner) {
