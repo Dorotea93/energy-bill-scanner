@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Energy Bill Scanner</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.4/html5-qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         * {
             margin: 0;
@@ -317,27 +317,6 @@
 
     <script>
         let html5QrcodeScanner;
-        let scannerInitialized = false;
-
-        // Verificar que la librería está cargada
-        function waitForLibrary(callback, maxAttempts = 10) {
-            let attempts = 0;
-            
-            const checkLibrary = () => {
-                if (typeof Html5Qrcode !== 'undefined') {
-                    console.log('✓ Html5Qrcode cargado correctamente');
-                    callback();
-                } else if (attempts < maxAttempts) {
-                    attempts++;
-                    console.log(`Esperando librería... intento ${attempts}/${maxAttempts}`);
-                    setTimeout(checkLibrary, 200);
-                } else {
-                    showMessage('error', '❌ Error: No se pudo cargar la librería QR. Recarga la página.');
-                }
-            };
-            
-            checkLibrary();
-        }
 
         function showMessage(type, text) {
             const messageDiv = document.getElementById('message');
@@ -353,19 +332,10 @@
         }
 
         function startScanner() {
-    document.getElementById('startBtn').disabled = true;
-    document.getElementById('startBtn').style.display = 'none';
-    document.getElementById('stopBtn').style.display = 'block';
-    showMessage('info', 'ℹ️ Cargando librería...');
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('stopBtn').style.display = 'block';
 
-    // Esperar más tiempo a que la librería cargue
-    let attempts = 0;
-    const maxAttempts = 30; // 3 segundos
-    
-    const tryStartScanner = () => {
-        if (typeof Html5Qrcode !== 'undefined') {
-            console.log('✓ Html5Qrcode disponible, iniciando...');
-            
+            // Pedir permiso de cámara primero
             navigator.mediaDevices.getUserMedia({ 
                 video: { 
                     facingMode: "environment",
@@ -376,62 +346,51 @@
             .then(stream => {
                 stream.getTracks().forEach(track => track.stop());
                 
-                try {
-                    html5QrcodeScanner = new Html5Qrcode("reader");
+                html5QrcodeScanner = new Html5Qrcode("reader");
 
-                    const config = {
-                        fps: 10,
-                        qrbox: { width: 250, height: 250 },
+                const config = {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 },
+                    aspectRatio: 1.0
+                };
+
+                const onScanSuccess = (decodedText, decodedResult) => {
+                    console.log('QR detectado:', decodedText);
+                    document.getElementById('resultValue').textContent = decodedText;
+                    document.getElementById('resultDiv').style.display = 'block';
+                    stopScanner();
+                    processQRCode(decodedText);
+                };
+
+                const onScanFailure = (error) => {
+                    // Silenciadamente fallar
+                };
+
+                html5QrcodeScanner.start(
+                    { 
+                        facingMode: "environment",
+                        width: { ideal: 720 },
+                        height: { ideal: 720 },
                         aspectRatio: 1.0
-                    };
-
-                    const onScanSuccess = (decodedText, decodedResult) => {
-                        console.log('QR detectado:', decodedText);
-                        
-                        document.getElementById('resultValue').textContent = decodedText;
-                        document.getElementById('resultDiv').style.display = 'block';
-
-                        stopScanner();
-                        processQRCode(decodedText);
-                    };
-
-                    const onScanFailure = (error) => {
-                        // Silenciadamente fallar
-                    };
-
-                    html5QrcodeScanner.start(
-                        { 
-                            facingMode: "environment",
-                            width: { ideal: 720 },
-                            height: { ideal: 720 },
-                            aspectRatio: 1.0
-                        },
-                        config,
-                        onScanSuccess,
-                        onScanFailure
-                    ).catch(err => {
-                        console.error('Error al iniciar scanner:', err);
-                        showMessage('error', '❌ Error: ' + err.message);
-                        document.getElementById('startBtn').style.display = 'block';
-                        document.getElementById('startBtn').disabled = false;
-                        document.getElementById('stopBtn').style.display = 'none';
-                    });
-
-                    showMessage('info', 'ℹ️ Escanea el código QR...');
-                } catch (e) {
-                    console.error('Error al crear Html5Qrcode:', e);
-                    showMessage('error', '❌ Error: ' + e.message);
+                    },
+                    config,
+                    onScanSuccess,
+                    onScanFailure
+                ).catch(err => {
+                    console.error('Error al iniciar scanner:', err);
+                    showMessage('error', '❌ Error al iniciar scanner');
                     document.getElementById('startBtn').style.display = 'block';
-                    document.getElementById('startBtn').disabled = false;
                     document.getElementById('stopBtn').style.display = 'none';
-                }
+                });
+
+                showMessage('info', 'ℹ️ Escanea el código QR...');
             })
             .catch(err => {
                 console.error('Error de permiso:', err);
                 let errorMsg = '❌ Error al acceder a la cámara';
                 
                 if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                    errorMsg = '❌ Permiso denegado. Intenta de nuevo.';
+                    errorMsg = '❌ Permiso denegado. Pulsa "Permitir" cuando se solicite.';
                 } else if (err.name === 'NotFoundError') {
                     errorMsg = '❌ No se encontró cámara.';
                 } else if (err.name === 'NotReadableError') {
@@ -440,38 +399,17 @@
                 
                 showMessage('error', errorMsg);
                 document.getElementById('startBtn').style.display = 'block';
-                document.getElementById('startBtn').disabled = false;
                 document.getElementById('stopBtn').style.display = 'none';
             });
-        } else {
-            attempts++;
-            if (attempts < maxAttempts) {
-                console.log(`Esperando librería... ${attempts}/${maxAttempts}`);
-                setTimeout(tryStartScanner, 100);
-            } else {
-                console.error('Librería no cargó');
-                showMessage('error', '❌ Error: Librería no disponible. Recarga la página.');
-                document.getElementById('startBtn').style.display = 'block';
-                document.getElementById('startBtn').disabled = false;
-                document.getElementById('stopBtn').style.display = 'none';
-            }
         }
-    };
-    
-    tryStartScanner();
-}
-
 
         function stopScanner() {
             if (html5QrcodeScanner) {
                 html5QrcodeScanner.stop().then(() => {
                     document.getElementById('startBtn').style.display = 'block';
-                    document.getElementById('startBtn').disabled = false;
                     document.getElementById('stopBtn').style.display = 'none';
                 }).catch(err => {
                     console.error('Error al detener scanner:', err);
-                    document.getElementById('startBtn').style.display = 'block';
-                    document.getElementById('startBtn').disabled = false;
                 });
             }
         }
@@ -492,15 +430,15 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showMessage('success', '✅ Factura capturada correctamente. Los datos se han guardado.');
+                    showMessage('success', '✅ Factura capturada correctamente.');
                     document.getElementById('resultDiv').style.display = 'none';
                 } else {
-                    showMessage('error', '❌ Error: ' + (data.error || 'No se pudo procesar el código'));
+                    showMessage('error', '❌ Error: ' + (data.error || 'No se pudo procesar'));
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                showMessage('error', '❌ Error de conexión: ' + error.message);
+                showMessage('error', '❌ Error de conexión');
             });
         }
     </script>
