@@ -20,6 +20,50 @@ def init_db():
     conn = sqlite3.connect('data/bills.db')
     c = conn.cursor()
     
+    # Verificar si existe la tabla
+    c.execute("""
+        SELECT name FROM sqlite_master 
+        WHERE type='table' AND name='bills'
+    """)
+    
+    if not c.fetchone():
+        # Crear tabla solo si NO existe
+        c.execute('''
+            CREATE TABLE bills (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nombre TEXT,
+                apellido TEXT,
+                email TEXT,
+                url TEXT NOT NULL,
+                fecha_captura TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        print("✓ Tabla bills creada")
+    else:
+        # Si existe, verificar y añadir columnas faltantes
+        c.execute("PRAGMA table_info(bills)")
+        columns = {col[1] for col in c.fetchall()}
+        
+        if 'nombre' not in columns:
+            c.execute('ALTER TABLE bills ADD COLUMN nombre TEXT')
+            print("✓ Columna 'nombre' añadida")
+        if 'apellido' not in columns:
+            c.execute('ALTER TABLE bills ADD COLUMN apellido TEXT')
+            print("✓ Columna 'apellido' añadida")
+        if 'email' not in columns:
+            c.execute('ALTER TABLE bills ADD COLUMN email TEXT')
+            print("✓ Columna 'email' añadida")
+    
+    conn.commit()
+    conn.close()
+
+
+
+# Inicializar base de datos
+def init_db():
+    conn = sqlite3.connect('data/bills.db')
+    c = conn.cursor()
+    
     # Crear tabla (DROP solo si queremos limpiar - COMENTADO)
     c.execute('''
         CREATE TABLE IF NOT EXISTS bills (
