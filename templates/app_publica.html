@@ -340,9 +340,10 @@
                 html5QrcodeScanner = new Html5Qrcode("reader");
 
                 const config = {
-                    fps: 10,
-                    qrbox: { width: 250, height: 250 },
-                    aspectRatio: 1.0
+                    fps: 15,
+                    qrbox: { width: 320, height: 320 },
+                    aspectRatio: 1.0,
+                    disableFlip: false
                 };
 
                 const onScanSuccess = (decodedText, decodedResult) => {
@@ -360,7 +361,10 @@
                 // Iniciar scanner con configuración correcta
                 html5QrcodeScanner.start(
                     { 
-                        facingMode: "environment"
+                        facingMode: "environment",
+                        width: { ideal: 1280 },
+                        height: { ideal: 1280 },
+                        zoom: { min: 1, ideal: 2, max: 4 }
                     },
                     config,
                     onScanSuccess,
