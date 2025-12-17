@@ -338,18 +338,9 @@
             background: #777;
         }
 
-        .download-btn {
-            background: #2a9fab;
-            padding: 10px 15px;
-            display: inline-block;
-            border-radius: 6px;
-            margin-top: 10px;
-            font-size: 13px;
-        }
+        
 
-        .download-btn:hover {
-            background: #1d7a88;
-        }
+       
 
         .info-box {
             background: rgba(50, 184, 198, 0.1);
@@ -457,7 +448,7 @@
                     <div class="result-label">Estado</div>
                     <div id="processingStatus" class="result-value"></div>
                 </div>
-                <button class="download-btn" onclick="descargarExcel()">📥 Descargar Excel</button>
+                
             </div>
 
             <!-- FORMULARIO -->
@@ -667,30 +658,7 @@
             }
         }
 
-        async function descargarExcel() {
-            try {
-                const response = await fetch('/api/bills');
-                const bills = await response.json();
-
-                const excelData = bills.map((bill, index) => ({
-                    'ID': bill.id,
-                    'Nombre': bill.nombre || '-',
-                    'Apellido': bill.apellido || '-',
-                    'Email': bill.email || '-',
-                    'Código': bill.url.split('?cp=')[1] || 'N/A',
-                    'Fecha Captura': bill.fecha_captura,
-                    'URL': bill.url
-                }));
-
-                const ws = XLSX.utils.json_to_sheet(excelData);
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, 'Facturas');
-
-                XLSX.writeFile(wb, 'facturas_energia.xlsx');
-            } catch (error) {
-                alert('Error al descargar Excel: ' + error.message);
-            }
-        }
+        
     </script>
 </body>
 </html>

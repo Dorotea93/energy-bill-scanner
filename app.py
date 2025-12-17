@@ -19,8 +19,13 @@ if not os.path.exists('data'):
 def init_db():
     conn = sqlite3.connect('data/bills.db')
     c = conn.cursor()
+    
+    # Eliminar tabla vieja si existe
+    c.execute('DROP TABLE IF EXISTS bills')
+    
+    # Crear tabla nueva con todas las columnas
     c.execute('''
-        CREATE TABLE IF NOT EXISTS bills (
+        CREATE TABLE bills (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nombre TEXT,
             apellido TEXT,
@@ -29,10 +34,10 @@ def init_db():
             fecha_captura TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    
     conn.commit()
     conn.close()
 
-init_db()
 
 @app.route('/')
 def index():
