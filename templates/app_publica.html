@@ -316,7 +316,7 @@
     </div>
 
     <script>
-        let html5QrcodeScanner;
+        let html5QrcodeScanner = null;
 
         function showMessage(type, text) {
             const messageDiv = document.getElementById('message');
@@ -335,17 +335,8 @@
             document.getElementById('startBtn').style.display = 'none';
             document.getElementById('stopBtn').style.display = 'block';
 
-            // Pedir permiso de cámara primero
-            navigator.mediaDevices.getUserMedia({ 
-                video: { 
-                    facingMode: "environment",
-                    width: { ideal: 720 },
-                    height: { ideal: 720 }
-                } 
-            })
-            .then(stream => {
-                stream.getTracks().forEach(track => track.stop());
-                
+            try {
+                // Crear instancia nueva
                 html5QrcodeScanner = new Html5Qrcode("reader");
 
                 const config = {
@@ -363,53 +354,47 @@
                 };
 
                 const onScanFailure = (error) => {
-                    // Silenciadamente fallar
+                    // Silenciosamente fallar
                 };
 
+                // Iniciar scanner con configuración correcta
                 html5QrcodeScanner.start(
                     { 
-                        facingMode: "environment",
-                        width: { ideal: 720 },
-                        height: { ideal: 720 },
-                        aspectRatio: 1.0
+                        facingMode: "environment"
                     },
                     config,
                     onScanSuccess,
                     onScanFailure
-                ).catch(err => {
+                ).then(() => {
+                    showMessage('info', 'ℹ️ Escanea el código QR...');
+                }).catch(err => {
                     console.error('Error al iniciar scanner:', err);
-                    showMessage('error', '❌ Error al iniciar scanner');
+                    showMessage('error', '❌ Error al iniciar scanner: ' + err.message);
                     document.getElementById('startBtn').style.display = 'block';
                     document.getElementById('stopBtn').style.display = 'none';
+                    html5QrcodeScanner = null;
                 });
 
-                showMessage('info', 'ℹ️ Escanea el código QR...');
-            })
-            .catch(err => {
-                console.error('Error de permiso:', err);
-                let errorMsg = '❌ Error al acceder a la cámara';
-                
-                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                    errorMsg = '❌ Permiso denegado. Pulsa "Permitir" cuando se solicite.';
-                } else if (err.name === 'NotFoundError') {
-                    errorMsg = '❌ No se encontró cámara.';
-                } else if (err.name === 'NotReadableError') {
-                    errorMsg = '❌ La cámara está en uso.';
-                }
-                
-                showMessage('error', errorMsg);
+            } catch (err) {
+                console.error('Error:', err);
+                showMessage('error', '❌ Error: ' + err.message);
                 document.getElementById('startBtn').style.display = 'block';
                 document.getElementById('stopBtn').style.display = 'none';
-            });
+                html5QrcodeScanner = null;
+            }
         }
 
         function stopScanner() {
             if (html5QrcodeScanner) {
                 html5QrcodeScanner.stop().then(() => {
+                    html5QrcodeScanner = null;
                     document.getElementById('startBtn').style.display = 'block';
                     document.getElementById('stopBtn').style.display = 'none';
                 }).catch(err => {
                     console.error('Error al detener scanner:', err);
+                    html5QrcodeScanner = null;
+                    document.getElementById('startBtn').style.display = 'block';
+                    document.getElementById('stopBtn').style.display = 'none';
                 });
             }
         }
