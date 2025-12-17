@@ -533,17 +533,58 @@
 
         function displayResult(code) {
             lastScannedData = code.data;
+            
+            // Verificar primero si el QR ya existe en la BD
+            verificarQREnBD(code.data);
+        }
 
-            document.getElementById('resultContainer').classList.add('hidden');
-            document.getElementById('noResultText').classList.add('hidden');
-            document.getElementById('formSection').classList.remove('hidden');
+        async function verificarQREnBD(qrUrl) {
+            try {
+                const response = await fetch('/api/check-qr', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url: qrUrl })
+                });
 
-            // Limpiar campos
-            document.getElementById('nombre').value = '';
-            document.getElementById('apellidos').value = '';
-            document.getElementById('email').value = '';
+                const data = await response.json();
 
-            stopCamera();
+                if (data.existe) {
+                    // QR ya existe: mostrar aviso sin pedir datos
+                    document.getElementById('resultContainer').classList.add('hidden');
+                    document.getElementById('noResultText').classList.add('hidden');
+                    document.getElementById('formSection').classList.add('hidden');
+
+                    document.getElementById('qrData').textContent = qrUrl;
+                    document.getElementById('qrUrl').innerHTML = '<a href="' + qrUrl + '" target="_blank">Ver en CNMC</a>';
+                    document.getElementById('processingStatus').innerHTML = '⚠️ Este QR ya fue escaneado anteriormente';
+                    document.getElementById('processingStatus').classList.add('error');
+                    document.getElementById('processingStatus').classList.remove('success');
+
+                    document.getElementById('resultContainer').classList.remove('hidden');
+                    stopCamera();
+                } else {
+                    // QR nuevo: pedir datos del usuario
+                    document.getElementById('resultContainer').classList.add('hidden');
+                    document.getElementById('noResultText').classList.add('hidden');
+                    document.getElementById('formSection').classList.remove('hidden');
+
+                    // Limpiar campos
+                    document.getElementById('nombre').value = '';
+                    document.getElementById('apellidos').value = '';
+                    document.getElementById('email').value = '';
+
+                    stopCamera();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                // Si hay error al verificar, mostrar formulario igualmente
+                document.getElementById('resultContainer').classList.add('hidden');
+                document.getElementById('noResultText').classList.add('hidden');
+                document.getElementById('formSection').classList.remove('hidden');
+                stopCamera();
+            }
         }
 
         function guardarDatos() {
@@ -599,7 +640,7 @@
 
                 const data = await response.json();
 
-                // Si status es 409 = duplicado
+                // Si status es 409 = duplicado (redundante ahora pero por seguridad)
                 if (response.status === 409) {
                     document.getElementById('qrData').textContent = qrUrl;
                     document.getElementById('qrUrl').innerHTML = '<a href="' + qrUrl + '" target="_blank">Ver en CNMC</a>';
