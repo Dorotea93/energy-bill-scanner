@@ -271,6 +271,22 @@
             display: none;
         }
 
+        .spinner {
+            border: 3px solid rgba(50, 184, 198, 0.3);
+            border-top: 3px solid var(--color-primary);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         @media (max-width: 480px) {
             h1 {
                 font-size: 20px;
@@ -336,8 +352,8 @@
                     <div id="qrData" class="result-value"></div>
                 </div>
                 <div class="result-item">
-                    <div class="result-label">Tipo</div>
-                    <div id="qrType" class="result-value"></div>
+                    <div class="result-label">Procesando</div>
+                    <div id="processingStatus" class="result-value"></div>
                 </div>
             </div>
             <div id="noResultText" style="color: var(--color-text); font-size: 14px;">
@@ -352,7 +368,7 @@
         let context = canvas.getContext('2d');
         let isScanning = false;
         let stream = null;
-        let scannedQRCodes = []; // Array para almacenar QR escaneados
+        let scannedQRCodes = [];
 
         async function startCamera() {
             try {
@@ -404,7 +420,6 @@
         }
 
         function displayResult(code) {
-            // Obtener el estado del resultado
             let statusText = '';
             if (scannedQRCodes.includes(code.data)) {
                 statusText = '⚠️ QR Duplicado';
@@ -412,7 +427,6 @@
                 statusText = '✓ QR Detectado';
             }
             
-            // Actualizar el mensaje encima del cuadrado de la cámara
             document.getElementById('statusMessage').textContent = statusText;
 
             // Verificar si el QR ya ha sido escaneado
@@ -425,9 +439,8 @@
                 document.getElementById('status').classList.add('error');
                 document.getElementById('qrData').textContent = 'Este QR ya ha sido escaneado. No se puede escanear códigos duplicados.';
                 document.getElementById('qrData').classList.add('error');
-                document.getElementById('qrType').textContent = '-';
+                document.getElementById('processingStatus').innerHTML = '-';
                 
-                // Detener el scanner y permitir reiniciar
                 stopCamera();
                 return;
             }
@@ -442,10 +455,40 @@
             document.getElementById('status').classList.add('success');
             document.getElementById('qrData').textContent = code.data;
             document.getElementById('qrData').classList.remove('error');
-            document.getElementById('qrType').textContent = 'QR Code Standard';
+            document.getElementById('processingStatus').innerHTML = '<span class="spinner"></span>Enviando al administrador...';
             
-            // Detener el scanner y permitir reiniciar
+            // Detener el scanner
             stopCamera();
+
+            // AQUÍ ENVIAMOS LA URL AL ADMINISTRADOR
+            sendQRToAdmin(code.data);
+        }
+
+        // Función para enviar la URL al administrador
+        async function sendQRToAdmin(qrUrl) {
+            try {
+                const response = await fetch('/api/scrape', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url: qrUrl })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('processingStatus').innerHTML = '✓ Enviado correctamente al administrador';
+                    document.getElementById('processingStatus').classList.add('success');
+                } else {
+                    document.getElementById('processingStatus').innerHTML = '❌ Error: ' + (data.error || 'No se pudo enviar');
+                    document.getElementById('processingStatus').classList.add('error');
+                }
+            } catch (error) {
+                console.error('Error al enviar:', error);
+                document.getElementById('processingStatus').innerHTML = '❌ Error de conexión: ' + error.message;
+                document.getElementById('processingStatus').classList.add('error');
+            }
         }
     </script>
 </body>
