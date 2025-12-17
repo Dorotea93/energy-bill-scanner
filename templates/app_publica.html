@@ -363,6 +363,103 @@
     </div>
 
     <script>
+        // ==================== DETECCIÓN WHATSAPP ====================
+        function isOpenedInWhatsApp() {
+            const ua = navigator.userAgent;
+            return /WhatsApp/.test(ua) || /wv/.test(ua);
+        }
+
+        function detectAndroid() {
+            return /Android/i.test(navigator.userAgent);
+        }
+
+        function showWhatsAppWarning() {
+            if (isOpenedInWhatsApp()) {
+                const overlay = document.createElement('div');
+                overlay.id = 'whatsapp-warning';
+                overlay.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.8);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 9999;
+                    padding: 20px;
+                `;
+
+                const card = document.createElement('div');
+                card.style.cssText = `
+                    background: white;
+                    border-radius: 16px;
+                    padding: 24px;
+                    max-width: 400px;
+                    text-align: center;
+                    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+                `;
+
+                card.innerHTML = `
+                    <div style="font-size: 48px; margin-bottom: 16px;">📱</div>
+                    <h2 style="font-size: 20px; margin-bottom: 12px; color: #134252; font-weight: 600;">Abre en tu Navegador</h2>
+                    <p style="font-size: 14px; color: #666; margin-bottom: 20px; line-height: 1.6;">
+                        WhatsApp no permite acceso a la cámara por razones de seguridad. Para escanear códigos QR, debes abrir este enlace en tu navegador (Chrome, Firefox, etc.).
+                    </p>
+                    <button id="openInBrowser" style="
+                        width: 100%;
+                        padding: 14px;
+                        background: #32b8c6;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        margin-bottom: 15px;
+                        transition: all 0.3s ease;
+                    ">
+                        ✓ Abrir en Navegador
+                    </button>
+                    <p style="font-size: 12px; color: #999;">
+                        <strong>Pasos:</strong><br>
+                        1. Haz click en el botón<br>
+                        2. Selecciona Chrome u otro navegador<br>
+                        3. Acepta el permiso de cámara
+                    </p>
+                `;
+
+                overlay.appendChild(card);
+                document.body.appendChild(overlay);
+
+                const btn = document.getElementById('openInBrowser');
+                btn.addEventListener('mouseover', function() {
+                    this.style.background = '#2a9fab';
+                });
+                btn.addEventListener('mouseout', function() {
+                    this.style.background = '#32b8c6';
+                });
+                btn.addEventListener('click', function() {
+                    const currentUrl = window.location.href;
+                    if (detectAndroid()) {
+                        window.location.href = 'intent://' + currentUrl.replace('https://', '').replace('http://', '') + '#Intent;scheme=https;package=com.android.chrome;end';
+                    } else {
+                        window.location.href = currentUrl;
+                    }
+                });
+
+                return true;
+            }
+            return false;
+        }
+
+        // Llamar cuando carga la página
+        document.addEventListener('DOMContentLoaded', function() {
+            showWhatsAppWarning();
+        });
+
+        // ==================== CÓDIGO ORIGINAL ====================
         let video = document.getElementById('video');
         let canvas = document.createElement('canvas');
         let context = canvas.getContext('2d');
@@ -370,15 +467,8 @@
         let stream = null;
         let scannedQRCodes = [];
 
-        // Detectar navegador y sistema operativo
-        function detectAndroid() {
-            return /Android/i.test(navigator.userAgent);
-        }
-
-        // Forzar solicitud de permiso de cámara sin restricciones
         async function requestCameraPermissionWithFallback() {
             try {
-                // Intentar obtener cámara con configuración para Android compatible
                 const constraints = { 
                     video: { 
                         facingMode: { ideal: 'environment' },
@@ -395,7 +485,6 @@
             } catch (error) {
                 console.error('Error con constrains avanzados:', error);
 
-                // Fallback 1: Intentar sin especificar facingMode
                 try {
                     const basicConstraints = { 
                         video: {
@@ -411,7 +500,6 @@
                 } catch (error2) {
                     console.error('Error con constrains básicos:', error2);
 
-                    // Fallback 2: Intentar con mínimas restricciones
                     try {
                         stream = await navigator.mediaDevices.getUserMedia({ 
                             video: true,
@@ -420,7 +508,6 @@
                         return { success: true, stream: stream };
 
                     } catch (finalError) {
-                        // Error final: determinar tipo de error
                         if (finalError.name === 'NotAllowedError') {
                             return { 
                                 success: false, 
@@ -461,7 +548,6 @@
             try {
                 document.getElementById('startBtn').disabled = true;
                 
-                // Solicitar permiso de cámara con fallbacks
                 const result = await requestCameraPermissionWithFallback();
 
                 if (!result.success) {
@@ -470,10 +556,8 @@
                     return;
                 }
 
-                // Si llegamos aquí, tenemos acceso a la cámara
                 video.srcObject = stream;
 
-                // Esperar a que el video esté listo
                 video.onloadedmetadata = () => {
                     try {
                         canvas.width = video.videoWidth;
@@ -493,7 +577,6 @@
                     }
                 };
 
-                // Manejo de errores del video
                 video.onerror = (error) => {
                     console.error('Error en el elemento video:', error);
                     alert('Error en la reproducción de video');
@@ -520,7 +603,7 @@
                     errorMessage = `
                         <strong>Solución:</strong><br>
                         1. Ve a <strong>Configuración</strong><br>
-                        2. Aplicaciones → ${detectAndroid() ? 'Permiso' : 'Aplicaciones'}<br>
+                        2. Aplicaciones → Permiso<br>
                         3. Busca tu navegador (Chrome, Firefox, etc.)<br>
                         4. Clic en <strong>Permisos</strong><br>
                         5. Activa <strong>Cámara</strong><br>
@@ -594,7 +677,6 @@
             
             document.getElementById('statusMessage').textContent = statusText;
 
-            // Verificar si el QR ya ha sido escaneado
             if (scannedQRCodes.includes(code.data)) {
                 document.getElementById('resultContainer').classList.remove('hidden');
                 document.getElementById('noResultText').classList.add('hidden');
@@ -610,7 +692,6 @@
                 return;
             }
 
-            // Si es un QR nuevo, agregarlo al array
             scannedQRCodes.push(code.data);
 
             document.getElementById('resultContainer').classList.remove('hidden');
@@ -622,14 +703,10 @@
             document.getElementById('qrData').classList.remove('error');
             document.getElementById('processingStatus').innerHTML = '<span class="spinner"></span>Enviando al administrador...';
             
-            // Detener el scanner
             stopCamera();
-
-            // AQUÍ ENVIAMOS LA URL AL ADMINISTRADOR
             sendQRToAdmin(code.data);
         }
 
-        // Función para enviar la URL al administrador
         async function sendQRToAdmin(qrUrl) {
             try {
                 const response = await fetch('/api/scrape', {
