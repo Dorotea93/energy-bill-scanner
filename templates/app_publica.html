@@ -48,6 +48,7 @@
         .video-container {
             position: relative;
             width: 100%;
+            aspect-ratio: 1 / 1;
             background: #000;
             border-radius: 8px;
             overflow: hidden;
@@ -56,6 +57,8 @@
 
         #video {
             width: 100%;
+            height: 100%;
+            object-fit: cover;
             display: block;
         }
 
@@ -322,10 +325,6 @@
                     <div class="result-label">Tipo</div>
                     <div id="qrType" class="result-value"></div>
                 </div>
-                <div class="result-item">
-                    <div class="result-label">Ubicación</div>
-                    <div id="qrLocation" class="result-value"></div>
-                </div>
             </div>
             <div id="noResultText" style="color: var(--color-text); font-size: 14px;">
                 Aún no se ha detectado ningún código QR. Inicia la cámara e intenta escanear.
@@ -339,6 +338,7 @@
         let context = canvas.getContext('2d');
         let isScanning = false;
         let stream = null;
+        let scannedQRCodes = []; // Array para almacenar QR escaneados
 
         async function startCamera() {
             try {
@@ -355,6 +355,8 @@
                     canvas.height = video.videoHeight;
                     isScanning = true;
                     document.getElementById('startBtn').disabled = true;
+                    document.getElementById('resultContainer').classList.add('hidden');
+                    document.getElementById('noResultText').classList.remove('hidden');
                     scan();
                 };
             } catch (error) {
@@ -385,17 +387,37 @@
         }
 
         function displayResult(code) {
+            // Verificar si el QR ya ha sido escaneado
+            if (scannedQRCodes.includes(code.data)) {
+                document.getElementById('resultContainer').classList.remove('hidden');
+                document.getElementById('noResultText').classList.add('hidden');
+                
+                document.getElementById('status').textContent = '⚠️ QR Duplicado';
+                document.getElementById('status').classList.remove('success');
+                document.getElementById('status').classList.add('error');
+                document.getElementById('qrData').textContent = 'Este QR ya ha sido escaneado. No se puede escanear códigos duplicados.';
+                document.getElementById('qrData').classList.add('error');
+                document.getElementById('qrType').textContent = '-';
+                
+                // Detener el scanner y permitir reiniciar
+                stopCamera();
+                return;
+            }
+
+            // Si es un QR nuevo, agregarlo al array
+            scannedQRCodes.push(code.data);
+
             document.getElementById('resultContainer').classList.remove('hidden');
             document.getElementById('noResultText').classList.add('hidden');
             
             document.getElementById('status').textContent = '✓ QR Detectado';
             document.getElementById('status').classList.add('success');
             document.getElementById('qrData').textContent = code.data;
+            document.getElementById('qrData').classList.remove('error');
             document.getElementById('qrType').textContent = 'QR Code Standard';
             
-            let location = code.location;
-            document.getElementById('qrLocation').textContent = 
-                `X: ${Math.round(location.topLeftCorner.x)}, Y: ${Math.round(location.topLeftCorner.y)}`;
+            // Detener el scanner y permitir reiniciar
+            stopCamera();
         }
     </script>
 </body>
