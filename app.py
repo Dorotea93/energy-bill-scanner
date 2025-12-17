@@ -15,24 +15,25 @@ CORS(app)
 if not os.path.exists('data'):
     os.makedirs('data')
 
-# Inicializar base de datos
+# Inicializar base de datos (UNA sola función)
 def init_db():
     conn = sqlite3.connect('data/bills.db')
     c = conn.cursor()
-    
+
     # Verificar si existe la tabla
     c.execute("""
         SELECT name FROM sqlite_master 
         WHERE type='table' AND name='bills'
     """)
-    
-    if not c.fetchone():
+    existe = c.fetchone()
+
+    if not existe:
         # Crear tabla solo si NO existe
         c.execute('''
             CREATE TABLE bills (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 nombre TEXT,
-                apellido TEXT,
+                apellidos TEXT,
                 email TEXT,
                 url TEXT NOT NULL,
                 fecha_captura TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -42,39 +43,18 @@ def init_db():
     else:
         # Si existe, verificar y añadir columnas faltantes
         c.execute("PRAGMA table_info(bills)")
-        columns = {col[1] for col in c.fetchall()}
-        
-        if 'nombre' not in columns:
+        columnas = {col[1] for col in c.fetchall()}
+
+        if 'nombre' not in columnas:
             c.execute('ALTER TABLE bills ADD COLUMN nombre TEXT')
             print("✓ Columna 'nombre' añadida")
-        if 'apellido' not in columns:
-            c.execute('ALTER TABLE bills ADD COLUMN apellido TEXT')
-            print("✓ Columna 'apellido' añadida")
-        if 'email' not in columns:
+        if 'apellidos' not in columnas:
+            c.execute('ALTER TABLE bills ADD COLUMN apellidos TEXT')
+            print("✓ Columna 'apellidos' añadida")
+        if 'email' not in columnas:
             c.execute('ALTER TABLE bills ADD COLUMN email TEXT')
             print("✓ Columna 'email' añadida")
-    
-    conn.commit()
-    conn.close()
 
-
-
-# Inicializar base de datos
-def init_db():
-    conn = sqlite3.connect('data/bills.db')
-    c = conn.cursor()
-    
-    # Crear tabla (DROP solo si queremos limpiar - COMENTADO)
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS bills (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT,
-            apellido TEXT,
-            email TEXT,
-            url TEXT NOT NULL,
-            fecha_captura TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
     conn.commit()
     conn.close()
     print("✓ Base de datos inicializada correctamente")
@@ -96,40 +76,40 @@ def scrape():
         data = request.json
         url = data.get('url')
         nombre = data.get('nombre', '')
-        apellido = data.get('apellido', '')
+        apellidos = data.get('apellidos', '')
         email = data.get('email', '')
-        
+
         if not url:
             return jsonify({'success': False, 'error': 'URL no proporcionada'}), 400
-        
+
         conn = sqlite3.connect('data/bills.db')
         c = conn.cursor()
-        
+
         # Verificar si la URL ya existe
         c.execute('SELECT id FROM bills WHERE url = ?', (url,))
         if c.fetchone():
             conn.close()
             return jsonify({'success': False, 'error': 'Esta factura ya fue escaneada', 'duplicado': True}), 409
-        
+
         # Guardar si no existe
         c.execute('''
-            INSERT INTO bills (nombre, apellido, email, url, fecha_captura)
+            INSERT INTO bills (nombre, apellidos, email, url, fecha_captura)
             VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-        ''', (nombre, apellido, email, url))
-        
+        ''', (nombre, apellidos, email, url))
+
         conn.commit()
         last_id = c.lastrowid
         conn.close()
-        
+
         return jsonify({
-            'success': True, 
+            'success': True,
             'message': 'Factura guardada correctamente',
             'id': last_id,
             'url': url
         })
-    
+
     except Exception as e:
-        print(f'Error: {e}')
+        print(f'Error en /api/scrape: {e}')
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/bills', methods=['GET'])
@@ -137,25 +117,25 @@ def get_bills():
     try:
         conn = sqlite3.connect('data/bills.db')
         c = conn.cursor()
-        c.execute('SELECT id, nombre, apellido, email, url, fecha_captura FROM bills ORDER BY fecha_captura DESC')
+        c.execute('SELECT id, nombre, apellidos, email, url, fecha_captura FROM bills ORDER BY fecha_captura DESC')
         rows = c.fetchall()
         conn.close()
-        
+
         bills = []
         for row in rows:
             bills.append({
                 'id': row[0],
                 'nombre': row[1],
-                'apellido': row[2],
+                'apellidos': row[2],
                 'email': row[3],
                 'url': row[4],
                 'fecha_captura': row[5]
             })
-        
+
         return jsonify(bills)
-    
+
     except Exception as e:
-        print(f'Error: {e}')
+        print(f'Error en /api/bills: {e}')
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/bills/<int:bill_id>', methods=['DELETE'])
@@ -168,6 +148,7 @@ def delete_bill(bill_id):
         conn.close()
         return jsonify({'success': True})
     except Exception as e:
+        print(f'Error en DELETE /api/bills/{bill_id}: {e}')
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/bills', methods=['DELETE'])
@@ -180,6 +161,7 @@ def delete_all_bills():
         conn.close()
         return jsonify({'success': True})
     except Exception as e:
+        print(f'Error en DELETE /api/bills: {e}')
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/download/excel', methods=['GET'])
@@ -187,7 +169,7 @@ def download_excel():
     try:
         conn = sqlite3.connect('data/bills.db')
         c = conn.cursor()
-        c.execute('SELECT id, nombre, apellido, email, url, fecha_captura FROM bills ORDER BY fecha_captura DESC')
+        c.execute('SELECT id, nombre, apellidos, email, url, fecha_captura FROM bills ORDER BY fecha_captura DESC')
         rows = c.fetchall()
         conn.close()
 
@@ -206,19 +188,19 @@ def download_excel():
         cell_format = workbook.add_format({'border': 1})
         url_format = workbook.add_format({'border': 1, 'text_wrap': True})
 
-        # Escribir encabezados
+        # Encabezados
         worksheet.write(0, 0, 'ID', header_format)
         worksheet.write(0, 1, 'Nombre', header_format)
-        worksheet.write(0, 2, 'Apellido', header_format)
+        worksheet.write(0, 2, 'Apellidos', header_format)
         worksheet.write(0, 3, 'Email', header_format)
         worksheet.write(0, 4, 'Código', header_format)
         worksheet.write(0, 5, 'Fecha Captura', header_format)
         worksheet.write(0, 6, 'URL CNMC', header_format)
 
-        # Escribir datos
+        # Datos
         for row_num, row in enumerate(rows, start=1):
             codigo = row[4].split('?cp=')[1].split('&')[0] if '?cp=' in row[4] else 'N/A'
-            
+
             worksheet.write(row_num, 0, row[0], cell_format)
             worksheet.write(row_num, 1, row[1] or '-', cell_format)
             worksheet.write(row_num, 2, row[2] or '-', cell_format)
@@ -227,7 +209,6 @@ def download_excel():
             worksheet.write(row_num, 5, row[5], cell_format)
             worksheet.write(row_num, 6, row[4], url_format)
 
-        # Ajustar ancho de columnas
         worksheet.set_column(0, 0, 5)
         worksheet.set_column(1, 1, 15)
         worksheet.set_column(2, 2, 15)
@@ -249,7 +230,7 @@ def download_excel():
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
     except Exception as e:
-        print(f'Error: {e}')
+        print(f'Error en /api/download/excel: {e}')
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/download/csv', methods=['GET'])
@@ -257,24 +238,24 @@ def download_csv():
     try:
         import csv
         from io import StringIO
-        
+
         conn = sqlite3.connect('data/bills.db')
         c = conn.cursor()
-        c.execute('SELECT id, nombre, apellido, email, url, fecha_captura FROM bills ORDER BY fecha_captura DESC')
+        c.execute('SELECT id, nombre, apellidos, email, url, fecha_captura FROM bills ORDER BY fecha_captura DESC')
         rows = c.fetchall()
         conn.close()
-        
+
         output = StringIO()
         writer = csv.writer(output)
-        writer.writerow(['ID', 'Nombre', 'Apellido', 'Email', 'Código', 'Fecha Captura', 'URL CNMC'])
-        
+        writer.writerow(['ID', 'Nombre', 'Apellidos', 'Email', 'Código', 'Fecha Captura', 'URL CNMC'])
+
         for row in rows:
             codigo = row[4].split('?cp=')[1].split('&')[0] if '?cp=' in row[4] else 'N/A'
             writer.writerow([row[0], row[1] or '-', row[2] or '-', row[3] or '-', codigo, row[5], row[4]])
-        
+
         output_bytes = output.getvalue().encode('utf-8-sig')
         output = io.BytesIO(output_bytes)
-        
+
         return send_file(
             output,
             mimetype='text/csv; charset=utf-8',
@@ -282,7 +263,7 @@ def download_csv():
             download_name=f'facturas_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
         )
     except Exception as e:
-        print(f'Error: {e}')
+        print(f'Error en /api/download/csv: {e}')
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/download/json', methods=['GET'])
@@ -290,25 +271,25 @@ def download_json():
     try:
         conn = sqlite3.connect('data/bills.db')
         c = conn.cursor()
-        c.execute('SELECT id, nombre, apellido, email, url, fecha_captura FROM bills ORDER BY fecha_captura DESC')
+        c.execute('SELECT id, nombre, apellidos, email, url, fecha_captura FROM bills ORDER BY fecha_captura DESC')
         rows = c.fetchall()
         conn.close()
-        
+
         bills = []
         for row in rows:
             codigo = row[4].split('?cp=')[1].split('&')[0] if '?cp=' in row[4] else 'N/A'
             bills.append({
                 'id': row[0],
                 'nombre': row[1],
-                'apellido': row[2],
+                'apellidos': row[2],
                 'email': row[3],
                 'codigo': codigo,
                 'url': row[4],
                 'fecha_captura': row[5]
             })
-        
+
         output = io.BytesIO(json.dumps(bills, indent=2, ensure_ascii=False).encode('utf-8'))
-        
+
         return send_file(
             output,
             mimetype='application/json',
@@ -316,7 +297,7 @@ def download_json():
             download_name=f'facturas_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
         )
     except Exception as e:
-        print(f'Error: {e}')
+        print(f'Error en /api/download/json: {e}')
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

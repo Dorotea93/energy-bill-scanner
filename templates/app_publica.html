@@ -461,8 +461,8 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="apellido">Apellido *</label>
-                    <input type="text" id="apellido" placeholder="Tu apellido">
+                    <label for="apellidos">Apellidos *</label>
+                    <input type="text" id="apellidos" placeholder="Tu apellidos">
                 </div>
 
                 <div class="form-group">
@@ -577,7 +577,7 @@
             
             // Limpiar campos
             document.getElementById('nombre').value = '';
-            document.getElementById('apellido').value = '';
+            document.getElementById('apellidos').value = '';
             document.getElementById('email').value = '';
             
             stopCamera();
@@ -585,10 +585,10 @@
 
         function guardarDatos() {
             const nombre = document.getElementById('nombre').value.trim();
-            const apellido = document.getElementById('apellido').value.trim();
+            const apellidos = document.getElementById('apellidos').value.trim();
             const email = document.getElementById('email').value.trim();
 
-            if (!nombre || !apellido || !email) {
+            if (!nombre || !apellidos || !email) {
                 alert('Por favor completa todos los campos');
                 return;
             }
@@ -601,7 +601,7 @@
             }
 
             // Enviar datos al servidor
-            sendQRToAdmin(lastScannedData, nombre, apellido, email);
+            sendQRToAdmin(lastScannedData, nombre, apellidos, email);
         }
 
         function cancelarFormulario() {
@@ -610,7 +610,7 @@
             document.getElementById('startBtn').disabled = false;
         }
 
-        async function sendQRToAdmin(qrUrl, nombre = '', apellido = '', email = '') {
+        async function sendQRToAdmin(qrUrl, nombre = '', apellidos = '', email = '') {
             document.getElementById('formSection').classList.add('hidden');
             
             const status = document.createElement('div');
@@ -629,7 +629,7 @@
                     body: JSON.stringify({ 
                         url: qrUrl,
                         nombre: nombre,
-                        apellido: apellido,
+                        apellidos: apellidos,
                         email: email
                     })
                 });

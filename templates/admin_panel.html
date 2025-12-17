@@ -301,7 +301,7 @@
                                     <tr>
                                         <th>ID</th>
                                         <th>Nombre</th>
-                                        <th>Apellido</th>
+                                        <th>Apellidos</th>
                                         <th>Email</th>
                                         <th>Código</th>
                                         <th>Fecha Captura</th>
@@ -318,7 +318,7 @@
                             : 'N/A';
                         
                         const nombre = bill.nombre || '-';
-                        const apellido = bill.apellido || '-';
+                        const apellidos = bill.apellidos || '-';
                         const email = bill.email || '-';
                         const fechaCaptura = new Date(bill.fecha_captura).toLocaleString('es-ES');
                         
@@ -326,7 +326,7 @@
                             <tr>
                                 <td><strong>${bill.id}</strong></td>
                                 <td>${nombre}</td>
-                                <td>${apellido}</td>
+                                <td>${apellidos}</td>
                                 <td>${email}</td>
                                 <td><strong>${codigo}</strong></td>
                                 <td>${fechaCaptura}</td>
@@ -395,7 +395,7 @@
                     const excelData = bills.map(bill => ({
                         'ID': bill.id,
                         'Nombre': bill.nombre || '-',
-                        'Apellido': bill.apellido || '-',
+                        'Apellidos': bill.apellidos || '-',
                         'Email': bill.email || '-',
                         'Código': bill.url.split('?cp=')[1] ? bill.url.split('?cp=')[1].split('&')[0] : 'N/A',
                         'Fecha Captura': bill.fecha_captura,
@@ -419,16 +419,16 @@
             fetch('/api/bills')
                 .then(response => response.json())
                 .then(bills => {
-                    let csv = 'ID,Nombre,Apellido,Email,Código,Fecha Captura,URL\n';
+                    let csv = 'ID,Nombre,Apellidos,Email,Código,Fecha Captura,URL\n';
                     
                     bills.forEach(bill => {
                         const codigo = bill.url.split('?cp=')[1] ? bill.url.split('?cp=')[1].split('&')[0] : 'N/A';
                         const nombre = (bill.nombre || '-').replace(/"/g, '""');
-                        const apellido = (bill.apellido || '-').replace(/"/g, '""');
+                        const apellidos = (bill.apellidos || '-').replace(/"/g, '""');
                         const email = (bill.email || '-').replace(/"/g, '""');
                         const url = bill.url.replace(/"/g, '""');
                         
-                        csv += `${bill.id},"${nombre}","${apellido}","${email}","${codigo}","${bill.fecha_captura}","${url}"\n`;
+                        csv += `${bill.id},"${nombre}","${apellidos}","${email}","${codigo}","${bill.fecha_captura}","${url}"\n`;
                     });
 
                     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
