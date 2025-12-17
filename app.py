@@ -15,6 +15,31 @@ CORS(app)
 if not os.path.exists('data'):
     os.makedirs('data')
 
+# ⭐ LIMPIAR BD VIEJA AL INICIAR
+if os.path.exists('data/bills.db'):
+    try:
+        os.remove('data/bills.db')
+        print("✓ Base de datos antigua eliminada")
+    except Exception as e:
+        print(f"Error al limpiar BD: {e}")
+
+# Inicializar base de datos
+def init_db():
+    conn = sqlite3.connect('data/bills.db')
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS bills (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT,
+            apellido TEXT,
+            email TEXT,
+            url TEXT NOT NULL,
+            fecha_captura TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
 # Inicializar base de datos
 def init_db():
     conn = sqlite3.connect('data/bills.db')
