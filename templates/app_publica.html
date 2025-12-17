@@ -338,10 +338,6 @@
             background: #777;
         }
 
-        
-
-       
-
         .info-box {
             background: rgba(50, 184, 198, 0.1);
             border-left: 4px solid var(--color-primary);
@@ -401,10 +397,10 @@
             <div class="camera-label" id="cameraStatus" style="display: none;">
                 <span id="statusMessage">Aún no se ha detectado ningún código QR. Inicia la cámara e intenta escanear.</span>
             </div>
-            
+
             <div class="video-container">
                 <video id="video" autoplay playsinline></video>
-                
+
                 <!-- GUÍA VISUAL DEL QR -->
                 <div class="qr-guide">
                     <div class="qr-guide-label">Coloca el QR aquí</div>
@@ -432,7 +428,6 @@
         <div class="result-section">
             <h2 style="font-size: 16px; margin-bottom: 15px;">Resultado del Escaneo</h2>
             <div id="resultContainer" class="hidden">
-                
                 <div class="result-item">
                     <div class="result-label">Código QR Detectado</div>
                     <div id="qrData" class="result-value"></div>
@@ -445,13 +440,12 @@
                     <div class="result-label">Estado</div>
                     <div id="processingStatus" class="result-value"></div>
                 </div>
-                
             </div>
 
             <!-- FORMULARIO -->
             <div id="formSection" class="form-section hidden">
                 <h3>Completa tus datos</h3>
-                
+
                 <div class="form-group">
                     <label for="nombre">Nombre *</label>
                     <input type="text" id="nombre" placeholder="Tu nombre">
@@ -459,7 +453,7 @@
 
                 <div class="form-group">
                     <label for="apellidos">Apellidos *</label>
-                    <input type="text" id="apellidos" placeholder="Tu apellidos">
+                    <input type="text" id="apellidos" placeholder="Tus apellidos">
                 </div>
 
                 <div class="form-group">
@@ -485,17 +479,16 @@
         let context = canvas.getContext('2d');
         let isScanning = false;
         let stream = null;
-        let scannedQRCodes = [];
         let lastScannedData = null;
 
         async function startCamera() {
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
                         facingMode: 'environment',
                         width: { ideal: 1280 },
                         height: { ideal: 720 }
-                    } 
+                    }
                 });
                 video.srcObject = stream;
                 video.onloadedmetadata = () => {
@@ -539,44 +532,17 @@
         }
 
         function displayResult(code) {
-            let statusText = '';
-            if (scannedQRCodes.includes(code.data)) {
-                statusText = '⚠️ QR Duplicado';
-            } else {
-                statusText = '✓ QR Detectado';
-            }
-            
-            document.getElementById('statusMessage').textContent = statusText;
-
-            // Verificar si el QR ya ha sido escaneado
-            if (scannedQRCodes.includes(code.data)) {
-                document.getElementById('resultContainer').classList.remove('hidden');
-                document.getElementById('formSection').classList.add('hidden');
-                document.getElementById('noResultText').classList.add('hidden');
-                
-                document.getElementById('processingStatus').textContent = '⚠️ QR Duplicado';
-                document.getElementById('processingStatus').classList.remove('success');
-                document.getElementById('processingStatus').classList.add('error');
-                document.getElementById('qrData').textContent = 'Este QR ya ha sido escaneado.';
-                document.getElementById('qrData').classList.add('error');
-                
-                stopCamera();
-                return;
-            }
-
-            // Si es un QR nuevo
-            scannedQRCodes.push(code.data);
             lastScannedData = code.data;
 
             document.getElementById('resultContainer').classList.add('hidden');
             document.getElementById('noResultText').classList.add('hidden');
             document.getElementById('formSection').classList.remove('hidden');
-            
+
             // Limpiar campos
             document.getElementById('nombre').value = '';
             document.getElementById('apellidos').value = '';
             document.getElementById('email').value = '';
-            
+
             stopCamera();
         }
 
@@ -609,7 +575,7 @@
 
         async function sendQRToAdmin(qrUrl, nombre = '', apellidos = '', email = '') {
             document.getElementById('formSection').classList.add('hidden');
-            
+
             const status = document.createElement('div');
             status.className = 'result-item';
             status.innerHTML = '<div class="result-label">Procesando</div><div class="result-value"><span class="spinner"></span>Guardando datos...</div>';
@@ -623,7 +589,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ 
+                    body: JSON.stringify({
                         url: qrUrl,
                         nombre: nombre,
                         apellidos: apellidos,
@@ -633,14 +599,22 @@
 
                 const data = await response.json();
 
+                // Si status es 409 = duplicado
+                if (response.status === 409) {
+                    document.getElementById('qrData').textContent = qrUrl;
+                    document.getElementById('qrUrl').innerHTML = '<a href="' + qrUrl + '" target="_blank">Ver en CNMC</a>';
+                    document.getElementById('processingStatus').innerHTML = '⚠️ Este QR ya fue escaneado anteriormente';
+                    document.getElementById('processingStatus').classList.add('error');
+                    status.remove();
+                    return;
+                }
+
+                // Si success = true
                 if (data.success) {
-                    document.getElementById('billId').textContent = data.id;
                     document.getElementById('qrData').textContent = qrUrl;
                     document.getElementById('qrUrl').innerHTML = '<a href="' + qrUrl + '" target="_blank">Ver en CNMC</a>';
                     document.getElementById('processingStatus').innerHTML = '✓ Guardado correctamente';
                     document.getElementById('processingStatus').classList.add('success');
-                    
-                    // Remover el status temporal
                     status.remove();
                 } else {
                     document.getElementById('processingStatus').innerHTML = '❌ Error: ' + (data.error || 'Error desconocido');
@@ -654,8 +628,6 @@
                 status.remove();
             }
         }
-
-        
     </script>
 </body>
 </html>
