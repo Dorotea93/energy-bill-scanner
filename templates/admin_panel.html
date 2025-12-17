@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel Admin - Energy Bill Scanner</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -19,7 +20,7 @@
         }
 
         .container {
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 0 auto;
         }
 
@@ -82,6 +83,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
+            font-size: 13px;
         }
 
         th {
@@ -91,10 +93,11 @@
             font-weight: 600;
             color: #333;
             border-bottom: 2px solid #667eea;
+            white-space: nowrap;
         }
 
         td {
-            padding: 15px;
+            padding: 12px 15px;
             border-bottom: 1px solid #eee;
             color: #666;
         }
@@ -132,25 +135,47 @@
             background: #5a67d8;
         }
 
+        .btn-secondary {
+            background: #9ca3af;
+            color: white;
+            margin-right: 10px;
+        }
+
+        .btn-secondary:hover {
+            background: #6b7280;
+        }
+
         .url-cell {
-            max-width: 300px;
+            max-width: 200px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
             color: #667eea;
             cursor: pointer;
+            text-decoration: none;
+        }
+
+        .url-cell:hover {
+            text-decoration: underline;
         }
 
         .alert {
             padding: 15px;
             border-radius: 10px;
             margin-bottom: 20px;
+            display: none;
         }
 
         .alert-success {
             background: #d1fae5;
             color: #065f46;
             border-left: 4px solid #10b981;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
         }
 
         .alert-info {
@@ -163,6 +188,7 @@
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
+            flex-wrap: wrap;
         }
 
         .empty-state {
@@ -174,6 +200,33 @@
         .empty-state-icon {
             font-size: 48px;
             margin-bottom: 20px;
+        }
+
+        .responsive-table {
+            overflow-x: auto;
+        }
+
+        @media (max-width: 768px) {
+            table {
+                font-size: 12px;
+            }
+
+            th, td {
+                padding: 10px;
+            }
+
+            .btn {
+                padding: 6px 12px;
+                font-size: 11px;
+            }
+
+            .actions {
+                flex-direction: column;
+            }
+
+            .actions button {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -198,10 +251,9 @@
             
             <div class="actions">
                 <button class="btn btn-primary" onclick="loadBills()">🔄 Actualizar</button>
+                <button class="btn btn-secondary" onclick="downloadExcel()">📊 Descargar Excel</button>
+                <button class="btn btn-secondary" onclick="downloadCSV()">📈 Descargar CSV</button>
                 <button class="btn btn-danger" onclick="deleteAll()">🗑️ Eliminar Todo</button>
-                <button class="btn btn--primary" onclick="downloadCSV()">📊 Descargar CSV</button>
-                <button class="btn btn--primary" onclick="downloadJSON()">📄 Descargar JSON</button>
-
             </div>
 
             <div id="billsContainer"></div>
@@ -243,17 +295,21 @@
                     }
 
                     let html = `
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Código</th>
-                                    <th>Fecha Captura</th>
-                                    <th>URL</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                        <div class="responsive-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nombre</th>
+                                        <th>Apellido</th>
+                                        <th>Email</th>
+                                        <th>Código</th>
+                                        <th>Fecha Captura</th>
+                                        <th>URL</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
                     `;
 
                     bills.forEach(bill => {
@@ -261,11 +317,19 @@
                             ? bill.url.split('cp=')[1].split('&')[0] 
                             : 'N/A';
                         
+                        const nombre = bill.nombre || '-';
+                        const apellido = bill.apellido || '-';
+                        const email = bill.email || '-';
+                        const fechaCaptura = new Date(bill.fecha_captura).toLocaleString('es-ES');
+                        
                         html += `
                             <tr>
-                                <td>${bill.id}</td>
+                                <td><strong>${bill.id}</strong></td>
+                                <td>${nombre}</td>
+                                <td>${apellido}</td>
+                                <td>${email}</td>
                                 <td><strong>${codigo}</strong></td>
-                                <td>${new Date(bill.fecha_captura).toLocaleString('es-ES')}</td>
+                                <td>${fechaCaptura}</td>
                                 <td>
                                     <a href="${bill.url}" target="_blank" class="url-cell" title="${bill.url}">
                                         📄 Ver en CNMC
@@ -281,8 +345,9 @@
                     });
 
                     html += `
-                            </tbody>
-                        </table>
+                                </tbody>
+                            </table>
+                        </div>
                     `;
 
                     container.innerHTML = html;
@@ -303,6 +368,7 @@
                     loadBills();
                 })
                 .catch(err => {
+                    console.error('Error:', err);
                     showAlert('error', '❌ Error al eliminar');
                 });
         }
@@ -317,7 +383,65 @@
                     loadBills();
                 })
                 .catch(err => {
+                    console.error('Error:', err);
                     showAlert('error', '❌ Error al eliminar todas');
+                });
+        }
+
+        function downloadExcel() {
+            fetch('/api/bills')
+                .then(response => response.json())
+                .then(bills => {
+                    const excelData = bills.map(bill => ({
+                        'ID': bill.id,
+                        'Nombre': bill.nombre || '-',
+                        'Apellido': bill.apellido || '-',
+                        'Email': bill.email || '-',
+                        'Código': bill.url.split('?cp=')[1] ? bill.url.split('?cp=')[1].split('&')[0] : 'N/A',
+                        'Fecha Captura': bill.fecha_captura,
+                        'URL': bill.url
+                    }));
+
+                    const ws = XLSX.utils.json_to_sheet(excelData);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, 'Facturas');
+
+                    XLSX.writeFile(wb, `facturas_energia_${new Date().toISOString().split('T')[0]}.xlsx`);
+                    showAlert('success', '✅ Excel descargado correctamente');
+                })
+                .catch(err => {
+                    console.error('Error:', err);
+                    showAlert('error', '❌ Error al descargar Excel');
+                });
+        }
+
+        function downloadCSV() {
+            fetch('/api/bills')
+                .then(response => response.json())
+                .then(bills => {
+                    let csv = 'ID,Nombre,Apellido,Email,Código,Fecha Captura,URL\n';
+                    
+                    bills.forEach(bill => {
+                        const codigo = bill.url.split('?cp=')[1] ? bill.url.split('?cp=')[1].split('&')[0] : 'N/A';
+                        const nombre = (bill.nombre || '-').replace(/"/g, '""');
+                        const apellido = (bill.apellido || '-').replace(/"/g, '""');
+                        const email = (bill.email || '-').replace(/"/g, '""');
+                        const url = bill.url.replace(/"/g, '""');
+                        
+                        csv += `${bill.id},"${nombre}","${apellido}","${email}","${codigo}","${bill.fecha_captura}","${url}"\n`;
+                    });
+
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `facturas_energia_${new Date().toISOString().split('T')[0]}.csv`;
+                    link.click();
+                    
+                    showAlert('success', '✅ CSV descargado correctamente');
+                })
+                .catch(err => {
+                    console.error('Error:', err);
+                    showAlert('error', '❌ Error al descargar CSV');
                 });
         }
 
@@ -326,15 +450,6 @@
 
         // Actualizar cada 5 segundos
         setInterval(loadBills, 5000);
-        function downloadCSV() {
-            window.location.href = '/api/download/csv';
-        }
-
-        function downloadJSON() {
-            window.location.href = '/api/download/json';
-        }
-
-        
     </script>
 </body>
 </html>

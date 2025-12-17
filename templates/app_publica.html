@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Energy Bill Scanner</title>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         :root {
             --color-primary: #32b8c6;
@@ -253,6 +254,103 @@
             color: #c01527;
         }
 
+        .result-value a {
+            color: var(--color-primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .result-value a:hover {
+            text-decoration: underline;
+        }
+
+        .form-section {
+            background: rgba(50, 184, 198, 0.05);
+            border: 1px solid rgba(50, 184, 198, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .form-section h3 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: var(--color-text);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--color-text);
+            margin-bottom: 5px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid rgba(94, 82, 64, 0.2);
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 2px rgba(50, 184, 198, 0.1);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .form-actions button {
+            flex: 1;
+            padding: 10px;
+            font-size: 13px;
+        }
+
+        .btn-guardar {
+            background: var(--color-primary);
+        }
+
+        .btn-guardar:hover {
+            background: #2a9fab;
+        }
+
+        .btn-cancelar {
+            background: #999;
+        }
+
+        .btn-cancelar:hover {
+            background: #777;
+        }
+
+        .download-btn {
+            background: #2a9fab;
+            padding: 10px 15px;
+            display: inline-block;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+
+        .download-btn:hover {
+            background: #1d7a88;
+        }
+
         .info-box {
             background: rgba(50, 184, 198, 0.1);
             border-left: 4px solid var(--color-primary);
@@ -344,18 +442,49 @@
             <h2 style="font-size: 16px; margin-bottom: 15px;">Resultado del Escaneo</h2>
             <div id="resultContainer" class="hidden">
                 <div class="result-item">
-                    <div class="result-label">Estado</div>
-                    <div id="status" class="result-value"></div>
+                    <div class="result-label">ID</div>
+                    <div id="billId" class="result-value"></div>
                 </div>
                 <div class="result-item">
                     <div class="result-label">Código QR Detectado</div>
                     <div id="qrData" class="result-value"></div>
                 </div>
                 <div class="result-item">
-                    <div class="result-label">Procesando</div>
+                    <div class="result-label">URL Detectada</div>
+                    <div id="qrUrl" class="result-value"></div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Estado</div>
                     <div id="processingStatus" class="result-value"></div>
                 </div>
+                <button class="download-btn" onclick="descargarExcel()">📥 Descargar Excel</button>
             </div>
+
+            <!-- FORMULARIO -->
+            <div id="formSection" class="form-section hidden">
+                <h3>Completa tus datos</h3>
+                
+                <div class="form-group">
+                    <label for="nombre">Nombre *</label>
+                    <input type="text" id="nombre" placeholder="Tu nombre">
+                </div>
+
+                <div class="form-group">
+                    <label for="apellido">Apellido *</label>
+                    <input type="text" id="apellido" placeholder="Tu apellido">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email *</label>
+                    <input type="email" id="email" placeholder="tu@email.com">
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn-guardar" onclick="guardarDatos()">✓ Guardar Datos</button>
+                    <button class="btn-cancelar" onclick="cancelarFormulario()">✕ Cancelar</button>
+                </div>
+            </div>
+
             <div id="noResultText" style="color: var(--color-text); font-size: 14px;">
                 Aún no se ha detectado ningún código QR. Inicia la cámara e intenta escanear.
             </div>
@@ -369,6 +498,7 @@
         let isScanning = false;
         let stream = null;
         let scannedQRCodes = [];
+        let lastScannedData = null;
 
         async function startCamera() {
             try {
@@ -386,8 +516,9 @@
                     isScanning = true;
                     document.getElementById('startBtn').disabled = true;
                     document.getElementById('cameraStatus').style.display = 'flex';
-                    document.getElementById('statusMessage').textContent = 'Aún no se ha detectado ningún código QR. Inicia la cámara e intenta escanear.';
+                    document.getElementById('statusMessage').textContent = 'Escaneando...';
                     document.getElementById('resultContainer').classList.add('hidden');
+                    document.getElementById('formSection').classList.add('hidden');
                     document.getElementById('noResultText').classList.remove('hidden');
                     scan();
                 };
@@ -432,62 +563,132 @@
             // Verificar si el QR ya ha sido escaneado
             if (scannedQRCodes.includes(code.data)) {
                 document.getElementById('resultContainer').classList.remove('hidden');
+                document.getElementById('formSection').classList.add('hidden');
                 document.getElementById('noResultText').classList.add('hidden');
                 
-                document.getElementById('status').textContent = '⚠️ QR Duplicado';
-                document.getElementById('status').classList.remove('success');
-                document.getElementById('status').classList.add('error');
-                document.getElementById('qrData').textContent = 'Este QR ya ha sido escaneado. No se puede escanear códigos duplicados.';
+                document.getElementById('processingStatus').textContent = '⚠️ QR Duplicado';
+                document.getElementById('processingStatus').classList.remove('success');
+                document.getElementById('processingStatus').classList.add('error');
+                document.getElementById('qrData').textContent = 'Este QR ya ha sido escaneado.';
                 document.getElementById('qrData').classList.add('error');
-                document.getElementById('processingStatus').innerHTML = '-';
                 
                 stopCamera();
                 return;
             }
 
-            // Si es un QR nuevo, agregarlo al array
+            // Si es un QR nuevo
             scannedQRCodes.push(code.data);
+            lastScannedData = code.data;
 
-            document.getElementById('resultContainer').classList.remove('hidden');
+            document.getElementById('resultContainer').classList.add('hidden');
             document.getElementById('noResultText').classList.add('hidden');
+            document.getElementById('formSection').classList.remove('hidden');
             
-            document.getElementById('status').textContent = '✓ QR Detectado';
-            document.getElementById('status').classList.add('success');
-            document.getElementById('qrData').textContent = code.data;
-            document.getElementById('qrData').classList.remove('error');
-            document.getElementById('processingStatus').innerHTML = '<span class="spinner"></span>Enviando al administrador...';
+            // Limpiar campos
+            document.getElementById('nombre').value = '';
+            document.getElementById('apellido').value = '';
+            document.getElementById('email').value = '';
             
-            // Detener el scanner
             stopCamera();
-
-            // AQUÍ ENVIAMOS LA URL AL ADMINISTRADOR
-            sendQRToAdmin(code.data);
         }
 
-        // Función para enviar la URL al administrador
-        async function sendQRToAdmin(qrUrl) {
+        function guardarDatos() {
+            const nombre = document.getElementById('nombre').value.trim();
+            const apellido = document.getElementById('apellido').value.trim();
+            const email = document.getElementById('email').value.trim();
+
+            if (!nombre || !apellido || !email) {
+                alert('Por favor completa todos los campos');
+                return;
+            }
+
+            // Validar email
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                alert('Por favor ingresa un email válido');
+                return;
+            }
+
+            // Enviar datos al servidor
+            sendQRToAdmin(lastScannedData, nombre, apellido, email);
+        }
+
+        function cancelarFormulario() {
+            document.getElementById('formSection').classList.add('hidden');
+            document.getElementById('noResultText').classList.remove('hidden');
+            document.getElementById('startBtn').disabled = false;
+        }
+
+        async function sendQRToAdmin(qrUrl, nombre = '', apellido = '', email = '') {
+            document.getElementById('formSection').classList.add('hidden');
+            
+            const status = document.createElement('div');
+            status.className = 'result-item';
+            status.innerHTML = '<div class="result-label">Procesando</div><div class="result-value"><span class="spinner"></span>Guardando datos...</div>';
+            document.getElementById('resultContainer').appendChild(status);
+            document.getElementById('resultContainer').classList.remove('hidden');
+            document.getElementById('noResultText').classList.add('hidden');
+
             try {
                 const response = await fetch('/api/scrape', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ url: qrUrl })
+                    body: JSON.stringify({ 
+                        url: qrUrl,
+                        nombre: nombre,
+                        apellido: apellido,
+                        email: email
+                    })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    document.getElementById('processingStatus').innerHTML = '✓ Enviado correctamente al administrador';
+                    document.getElementById('billId').textContent = data.id;
+                    document.getElementById('qrData').textContent = qrUrl;
+                    document.getElementById('qrUrl').innerHTML = '<a href="' + qrUrl + '" target="_blank">Ver en CNMC</a>';
+                    document.getElementById('processingStatus').innerHTML = '✓ Guardado correctamente';
                     document.getElementById('processingStatus').classList.add('success');
+                    
+                    // Remover el status temporal
+                    status.remove();
                 } else {
-                    document.getElementById('processingStatus').innerHTML = '❌ Error: ' + (data.error || 'No se pudo enviar');
+                    document.getElementById('processingStatus').innerHTML = '❌ Error: ' + (data.error || 'Error desconocido');
                     document.getElementById('processingStatus').classList.add('error');
+                    status.remove();
                 }
             } catch (error) {
-                console.error('Error al enviar:', error);
-                document.getElementById('processingStatus').innerHTML = '❌ Error de conexión: ' + error.message;
+                console.error('Error:', error);
+                document.getElementById('processingStatus').innerHTML = '❌ Error de conexión';
                 document.getElementById('processingStatus').classList.add('error');
+                status.remove();
+            }
+        }
+
+        async function descargarExcel() {
+            try {
+                const response = await fetch('/api/bills');
+                const bills = await response.json();
+
+                const excelData = bills.map((bill, index) => ({
+                    'ID': bill.id,
+                    'Nombre': bill.nombre || '-',
+                    'Apellido': bill.apellido || '-',
+                    'Email': bill.email || '-',
+                    'Código': bill.url.split('?cp=')[1] || 'N/A',
+                    'Fecha Captura': bill.fecha_captura,
+                    'URL': bill.url
+                }));
+
+                const ws = XLSX.utils.json_to_sheet(excelData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Facturas');
+
+                XLSX.writeFile(wb, 'facturas_energia.xlsx');
+            } catch (error) {
+                alert('Error al descargar Excel: ' + error.message);
             }
         }
     </script>
