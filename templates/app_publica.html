@@ -5,13 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Energy Bill Scanner</title>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         :root {
             --color-primary: #32b8c6;
             --color-bg: #fcfcf9;
             --color-text: #134252;
             --color-border: #5e5240;
+            --color-success: #2a9fab;
+            --color-error: #c01527;
+            --color-warning: #ff9800;
         }
 
         * {
@@ -73,7 +75,6 @@
             display: block;
         }
 
-        /* LÍMITES VISUALES DEL QR */
         .qr-guide {
             position: absolute;
             top: 50%;
@@ -132,7 +133,6 @@
             border-top: 6px solid var(--color-primary);
         }
 
-        /* Esquinas destacadas */
         .qr-corner {
             position: absolute;
             width: 20px;
@@ -246,12 +246,16 @@
         }
 
         .result-value.success {
-            color: #2a9fab;
+            color: var(--color-success);
             font-weight: 500;
         }
 
         .result-value.error {
-            color: #c01527;
+            color: var(--color-error);
+        }
+
+        .result-value.warning {
+            color: var(--color-warning);
         }
 
         .result-value a {
@@ -302,12 +306,23 @@
             font-size: 14px;
             font-family: inherit;
             box-sizing: border-box;
+            transition: border-color 0.3s ease;
         }
 
         .form-group input:focus {
             outline: none;
             border-color: var(--color-primary);
             box-shadow: 0 0 0 2px rgba(50, 184, 198, 0.1);
+        }
+
+        .form-group input.error {
+            border-color: var(--color-error);
+        }
+
+        .form-error {
+            color: var(--color-error);
+            font-size: 12px;
+            margin-top: 3px;
         }
 
         .form-actions {
@@ -352,6 +367,11 @@
             color: var(--color-primary);
         }
 
+        .info-box ol {
+            margin: 8px 0 0 20px;
+            padding: 0;
+        }
+
         .hidden {
             display: none;
         }
@@ -370,6 +390,28 @@
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .alert-error {
+            background: rgba(192, 21, 47, 0.1);
+            color: var(--color-error);
+            border: 1px solid var(--color-error);
+        }
+
+        .alert-success {
+            background: rgba(42, 155, 171, 0.1);
+            color: var(--color-success);
+            border: 1px solid var(--color-success);
         }
 
         @media (max-width: 480px) {
@@ -391,7 +433,11 @@
 <body>
     <div class="container">
         <h1>⚡ Energy Bill Scanner</h1>
-        <p style="text-align: center; font-size: 13px; color: var(--color-text); margin: -15px 0 20px 0;">Escanea el código QR de tu comparador de ofertas vigentes de las comercializadoras de energía eléctrica</p>
+        <p style="text-align: center; font-size: 13px; color: var(--color-text); margin: -15px 0 20px 0;">
+            Escanea el código QR de tu comparador de ofertas vigentes de las comercializadoras de energía eléctrica
+        </p>
+
+        <div id="alertDiv"></div>
 
         <div class="scanner-section">
             <div class="camera-label" id="cameraStatus" style="display: none;">
@@ -401,7 +447,6 @@
             <div class="video-container">
                 <video id="video" autoplay playsinline></video>
 
-                <!-- GUÍA VISUAL DEL QR -->
                 <div class="qr-guide">
                     <div class="qr-guide-label">Coloca el QR aquí</div>
                     <div class="qr-corner qr-corner-top-left"></div>
@@ -417,7 +462,7 @@
 
             <div class="info-box">
                 <strong>📋 Cómo usar:</strong>
-                <ol style="margin: 8px 0 0 20px; padding: 0;">
+                <ol>
                     <li>Haz click en <strong>Iniciar Scanner</strong></li>
                     <li>Permite acceso a la cámara de tu móvil</li>
                     <li>Alinea el código QR dentro del recuadro azul</li>
@@ -442,23 +487,25 @@
                 </div>
             </div>
 
-            <!-- FORMULARIO -->
             <div id="formSection" class="form-section hidden">
                 <h3>Completa tus datos</h3>
 
                 <div class="form-group">
                     <label for="nombre">Nombre *</label>
-                    <input type="text" id="nombre" placeholder="Tu nombre">
+                    <input type="text" id="nombre" placeholder="Tu nombre" maxlength="100">
+                    <div id="errorNombre" class="form-error hidden"></div>
                 </div>
 
                 <div class="form-group">
                     <label for="apellidos">Apellidos *</label>
-                    <input type="text" id="apellidos" placeholder="Tus apellidos">
+                    <input type="text" id="apellidos" placeholder="Tus apellidos" maxlength="100">
+                    <div id="errorApellidos" class="form-error hidden"></div>
                 </div>
 
                 <div class="form-group">
                     <label for="email">Email *</label>
-                    <input type="email" id="email" placeholder="tu@email.com">
+                    <input type="email" id="email" placeholder="tu@email.com" maxlength="255">
+                    <div id="errorEmail" class="form-error hidden"></div>
                 </div>
 
                 <div class="form-actions">
@@ -480,6 +527,39 @@
         let isScanning = false;
         let stream = null;
         let lastScannedData = null;
+        let maxRetries = 3;
+        let retryCount = 0;
+
+        // Mostrar alertas
+        function showAlert(type, message) {
+            const alertDiv = document.getElementById('alertDiv');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.innerHTML = `<span>${message}</span>`;
+            alertDiv.style.display = 'flex';
+
+            setTimeout(() => {
+                alertDiv.style.display = 'none';
+            }, 4000);
+        }
+
+        // Limpiar errores de formulario
+        function clearFormErrors() {
+            document.getElementById('nombre').classList.remove('error');
+            document.getElementById('apellidos').classList.remove('error');
+            document.getElementById('email').classList.remove('error');
+            document.getElementById('errorNombre').classList.add('hidden');
+            document.getElementById('errorApellidos').classList.add('hidden');
+            document.getElementById('errorEmail').classList.add('hidden');
+        }
+
+        // Mostrar error en campo
+        function showFieldError(fieldId, message) {
+            const input = document.getElementById(fieldId);
+            const errorDiv = document.getElementById(`error${fieldId.charAt(0).toUpperCase() + fieldId.slice(1)}`);
+            input.classList.add('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
 
         async function startCamera() {
             try {
@@ -504,7 +584,7 @@
                     scan();
                 };
             } catch (error) {
-                alert('Error al acceder a la cámara: ' + error.message);
+                showAlert('error', '❌ Error al acceder a la cámara: ' + error.message);
             }
         }
 
@@ -533,8 +613,6 @@
 
         function displayResult(code) {
             lastScannedData = code.data;
-            
-            // Verificar primero si el QR ya existe en la BD
             verificarQREnBD(code.data);
         }
 
@@ -550,27 +628,35 @@
 
                 const data = await response.json();
 
+                if (!response.ok) {
+                    showAlert('error', `❌ ${data.error || 'Error en la validación'}`);
+                    document.getElementById('formSection').classList.add('hidden');
+                    document.getElementById('noResultText').classList.remove('hidden');
+                    stopCamera();
+                    return;
+                }
+
                 if (data.existe) {
-                    // QR ya existe: mostrar aviso sin pedir datos
+                    // QR duplicado
                     document.getElementById('resultContainer').classList.add('hidden');
                     document.getElementById('noResultText').classList.add('hidden');
                     document.getElementById('formSection').classList.add('hidden');
 
                     document.getElementById('qrData').textContent = qrUrl;
-                    document.getElementById('qrUrl').innerHTML = '<a href="' + qrUrl + '" target="_blank">Ver en CNMC</a>';
+                    document.getElementById('qrUrl').innerHTML = `<a href="${qrUrl}" target="_blank">📄 Ver en CNMC</a>`;
                     document.getElementById('processingStatus').innerHTML = '⚠️ Este QR ya fue escaneado anteriormente';
-                    document.getElementById('processingStatus').classList.add('error');
-                    document.getElementById('processingStatus').classList.remove('success');
+                    document.getElementById('processingStatus').classList.add('warning');
+                    document.getElementById('processingStatus').classList.remove('success', 'error');
 
                     document.getElementById('resultContainer').classList.remove('hidden');
                     stopCamera();
                 } else {
-                    // QR nuevo: pedir datos del usuario
+                    // QR nuevo - mostrar formulario
+                    clearFormErrors();
                     document.getElementById('resultContainer').classList.add('hidden');
                     document.getElementById('noResultText').classList.add('hidden');
                     document.getElementById('formSection').classList.remove('hidden');
 
-                    // Limpiar campos
                     document.getElementById('nombre').value = '';
                     document.getElementById('apellidos').value = '';
                     document.getElementById('email').value = '';
@@ -579,32 +665,62 @@
                 }
             } catch (error) {
                 console.error('Error:', error);
-                // Si hay error al verificar, mostrar formulario igualmente
-                document.getElementById('resultContainer').classList.add('hidden');
-                document.getElementById('noResultText').classList.add('hidden');
-                document.getElementById('formSection').classList.remove('hidden');
+                showAlert('error', '❌ Error de conexión con el servidor');
+                document.getElementById('formSection').classList.add('hidden');
+                document.getElementById('noResultText').classList.remove('hidden');
                 stopCamera();
             }
         }
 
+        function validarFormulario() {
+            const nombre = document.getElementById('nombre').value.trim();
+            const apellidos = document.getElementById('apellidos').value.trim();
+            const email = document.getElementById('email').value.trim();
+            
+            clearFormErrors();
+            let valido = true;
+
+            if (!nombre) {
+                showFieldError('nombre', 'El nombre es requerido');
+                valido = false;
+            } else if (nombre.length < 2) {
+                showFieldError('nombre', 'El nombre debe tener al menos 2 caracteres');
+                valido = false;
+            }
+
+            if (!apellidos) {
+                showFieldError('apellidos', 'Los apellidos son requeridos');
+                valido = false;
+            } else if (apellidos.length < 2) {
+                showFieldError('apellidos', 'Los apellidos deben tener al menos 2 caracteres');
+                valido = false;
+            }
+
+            if (!email) {
+                showFieldError('email', 'El email es requerido');
+                valido = false;
+            } else if (!validarEmail(email)) {
+                showFieldError('email', 'El email no es válido');
+                valido = false;
+            }
+
+            return valido;
+        }
+
+        function validarEmail(email) {
+            const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return regex.test(email);
+        }
+
         function guardarDatos() {
+            if (!validarFormulario()) {
+                return;
+            }
+
             const nombre = document.getElementById('nombre').value.trim();
             const apellidos = document.getElementById('apellidos').value.trim();
             const email = document.getElementById('email').value.trim();
 
-            if (!nombre || !apellidos || !email) {
-                alert('Por favor completa todos los campos');
-                return;
-            }
-
-            // Validar email
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-                alert('Por favor ingresa un email válido');
-                return;
-            }
-
-            // Enviar datos al servidor
             sendQRToAdmin(lastScannedData, nombre, apellidos, email);
         }
 
@@ -612,9 +728,10 @@
             document.getElementById('formSection').classList.add('hidden');
             document.getElementById('noResultText').classList.remove('hidden');
             document.getElementById('startBtn').disabled = false;
+            clearFormErrors();
         }
 
-        async function sendQRToAdmin(qrUrl, nombre = '', apellidos = '', email = '') {
+        async function sendQRToAdmin(qrUrl, nombre, apellidos, email) {
             document.getElementById('formSection').classList.add('hidden');
 
             const status = document.createElement('div');
@@ -640,33 +757,37 @@
 
                 const data = await response.json();
 
-                // Si status es 409 = duplicado (redundante ahora pero por seguridad)
                 if (response.status === 409) {
+                    // Duplicado
                     document.getElementById('qrData').textContent = qrUrl;
-                    document.getElementById('qrUrl').innerHTML = '<a href="' + qrUrl + '" target="_blank">Ver en CNMC</a>';
+                    document.getElementById('qrUrl').innerHTML = `<a href="${qrUrl}" target="_blank">📄 Ver en CNMC</a>`;
                     document.getElementById('processingStatus').innerHTML = '⚠️ Este QR ya fue escaneado anteriormente';
-                    document.getElementById('processingStatus').classList.add('error');
+                    document.getElementById('processingStatus').classList.add('warning');
                     status.remove();
                     return;
                 }
 
-                // Si success = true
                 if (data.success) {
                     document.getElementById('qrData').textContent = qrUrl;
-                    document.getElementById('qrUrl').innerHTML = '<a href="' + qrUrl + '" target="_blank">Ver en CNMC</a>';
+                    document.getElementById('qrUrl').innerHTML = `<a href="${qrUrl}" target="_blank">📄 Ver en CNMC</a>`;
                     document.getElementById('processingStatus').innerHTML = '✓ Guardado correctamente';
                     document.getElementById('processingStatus').classList.add('success');
+                    document.getElementById('processingStatus').classList.remove('error', 'warning');
                     status.remove();
+                    showAlert('success', '✅ Datos guardados correctamente');
                 } else {
-                    document.getElementById('processingStatus').innerHTML = '❌ Error: ' + (data.error || 'Error desconocido');
+                    document.getElementById('processingStatus').innerHTML = `❌ ${data.error || 'Error desconocido'}`;
                     document.getElementById('processingStatus').classList.add('error');
+                    document.getElementById('processingStatus').classList.remove('success', 'warning');
                     status.remove();
+                    showAlert('error', `❌ ${data.error}`);
                 }
             } catch (error) {
                 console.error('Error:', error);
                 document.getElementById('processingStatus').innerHTML = '❌ Error de conexión';
                 document.getElementById('processingStatus').classList.add('error');
                 status.remove();
+                showAlert('error', '❌ Error de conexión con el servidor');
             }
         }
     </script>

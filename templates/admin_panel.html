@@ -24,21 +24,121 @@
             margin: 0 auto;
         }
 
+        /* ========== LOGIN ========== */
+        .login-container {
+            max-width: 400px;
+            margin: 100px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        .login-container h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .login-container p {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            text-align: left;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .login-btn:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .login-error {
+            color: #ef4444;
+            font-size: 13px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        /* ========== ADMIN PANEL ========== */
+        .admin-panel {
+            display: none;
+        }
+
         .header {
             background: white;
             padding: 30px;
             border-radius: 15px;
             margin-bottom: 30px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        .header h1 {
+        .header-content h1 {
             color: #333;
             margin-bottom: 10px;
         }
 
-        .header p {
+        .header-content p {
             color: #666;
+        }
+
+        .logout-btn {
+            padding: 10px 20px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: #dc2626;
         }
 
         .stats {
@@ -78,6 +178,26 @@
         .bills-table h2 {
             margin-bottom: 20px;
             color: #333;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
         }
 
         table {
@@ -164,24 +284,25 @@
             border-radius: 10px;
             margin-bottom: 20px;
             display: none;
+            border-left: 4px solid;
         }
 
         .alert-success {
             background: #d1fae5;
             color: #065f46;
-            border-left: 4px solid #10b981;
+            border-left-color: #10b981;
         }
 
         .alert-error {
             background: #fee2e2;
             color: #991b1b;
-            border-left: 4px solid #ef4444;
+            border-left-color: #ef4444;
         }
 
         .alert-info {
             background: #dbeafe;
             color: #0c2340;
-            border-left: 4px solid #3b82f6;
+            border-left-color: #3b82f6;
         }
 
         .actions {
@@ -206,6 +327,118 @@
             overflow-x: auto;
         }
 
+        /* MODAL */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-content h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .modal-content p {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-actions button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .modal-btn-confirm {
+            background: #ef4444;
+            color: white;
+        }
+
+        .modal-btn-confirm:hover {
+            background: #dc2626;
+        }
+
+        .modal-btn-cancel {
+            background: #9ca3af;
+            color: white;
+        }
+
+        .modal-btn-cancel:hover {
+            background: #6b7280;
+        }
+
+        /* PAGINACIÓN */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin-top: 20px;
+            align-items: center;
+        }
+
+        .pagination button {
+            padding: 6px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            color: #667eea;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: #667eea;
+            color: white;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination button.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .pagination span {
+            color: #666;
+            font-size: 12px;
+        }
+
         @media (max-width: 768px) {
             table {
                 font-size: 12px;
@@ -227,40 +460,142 @@
             .actions button {
                 width: 100%;
             }
+
+            .header {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>⚡ Panel de Administración</h1>
-            <p>Gestiona las facturas de energía capturadas</p>
+    <!-- LOGIN FORM -->
+    <div class="login-container" id="loginContainer">
+        <h1>🔒 Panel Administrativo</h1>
+        <p>Energy Bill Scanner</p>
+
+        <div class="form-group">
+            <label for="password">Contraseña</label>
+            <input type="password" id="password" placeholder="Ingresa la contraseña" autocomplete="off">
         </div>
 
-        <div id="alertDiv"></div>
+        <button class="login-btn" onclick="handleLogin()">Acceder</button>
+        <div class="login-error" id="loginError"></div>
+    </div>
 
-        <div class="stats">
-            <div class="stat-card">
-                <h3 id="totalBills">0</h3>
-                <p>Facturas Capturadas</p>
+    <!-- ADMIN PANEL -->
+    <div class="admin-panel" id="adminPanel">
+        <div class="container">
+            <div class="header">
+                <div class="header-content">
+                    <h1>⚡ Panel de Administración</h1>
+                    <p>Gestiona las facturas de energía capturadas</p>
+                </div>
+                <button class="logout-btn" onclick="handleLogout()">🚪 Cerrar Sesión</button>
+            </div>
+
+            <div id="alertDiv"></div>
+
+            <div class="stats">
+                <div class="stat-card">
+                    <h3 id="totalBills">0</h3>
+                    <p>Facturas Capturadas</p>
+                </div>
+            </div>
+
+            <div class="bills-table">
+                <h2>📋 Facturas Registradas</h2>
+                
+                <div class="actions">
+                    <button class="btn btn-primary" onclick="loadBills()">🔄 Actualizar</button>
+                    <button class="btn btn-secondary" onclick="downloadExcel()">📊 Descargar Excel</button>
+                    <button class="btn btn-secondary" onclick="downloadCSV()">📈 Descargar CSV</button>
+                    <button class="btn btn-secondary" onclick="downloadJSON()">📄 Descargar JSON</button>
+                    <button class="btn btn-danger" onclick="openDeleteAllModal()">🗑️ Eliminar Todo</button>
+                </div>
+
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Buscar por nombre, apellido, email o código..." onkeyup="search()">
+                </div>
+
+                <div id="billsContainer"></div>
+
+                <div class="pagination" id="paginationContainer"></div>
             </div>
         </div>
+    </div>
 
-        <div class="bills-table">
-            <h2>📋 Facturas Registradas</h2>
-            
-            <div class="actions">
-                <button class="btn btn-primary" onclick="loadBills()">🔄 Actualizar</button>
-                <button class="btn btn-secondary" onclick="downloadExcel()">📊 Descargar Excel</button>
-                <button class="btn btn-secondary" onclick="downloadCSV()">📈 Descargar CSV</button>
-                <button class="btn btn-danger" onclick="deleteAll()">🗑️ Eliminar Todo</button>
+    <!-- MODAL CONFIRMACIÓN -->
+    <div class="modal" id="confirmModal">
+        <div class="modal-content">
+            <h2 id="modalTitle">Confirmar acción</h2>
+            <p id="modalMessage">¿Estás seguro?</p>
+            <div class="modal-actions">
+                <button class="modal-btn-confirm" id="modalConfirmBtn" onclick="confirmDelete()">Eliminar</button>
+                <button class="modal-btn-cancel" onclick="closeModal()">Cancelar</button>
             </div>
-
-            <div id="billsContainer"></div>
         </div>
     </div>
 
     <script>
+        let currentPage = 1;
+        let itemsPerPage = 50;
+        let allBills = [];
+        let filteredBills = [];
+        let deleteAction = null;
+
+        // ========== AUTENTICACIÓN ==========
+        async function handleLogin() {
+            const password = document.getElementById('password').value;
+            
+            if (!password) {
+                showLoginError('Por favor ingresa la contraseña');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('loginContainer').style.display = 'none';
+                    document.getElementById('adminPanel').style.display = 'block';
+                    loadBills();
+                    startAutoRefresh();
+                } else {
+                    showLoginError('❌ Contraseña incorrecta');
+                }
+            } catch (error) {
+                showLoginError('❌ Error de conexión');
+            }
+        }
+
+        function showLoginError(message) {
+            const errorDiv = document.getElementById('loginError');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 4000);
+        }
+
+        async function handleLogout() {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            document.getElementById('adminPanel').style.display = 'none';
+            document.getElementById('loginContainer').style.display = 'block';
+            document.getElementById('password').value = '';
+            stopAutoRefresh();
+        }
+
+        // ========== UTILIDADES ==========
         function showAlert(type, message) {
             const alertDiv = document.getElementById('alertDiv');
             alertDiv.className = `alert alert-${type}`;
@@ -272,184 +607,314 @@
             }, 4000);
         }
 
-        function loadBills() {
-            fetch('/api/bills')
-                .then(response => response.json())
-                .then(bills => {
-                    console.log('Bills loaded:', bills);
-                    
-                    // Actualizar total
-                    document.getElementById('totalBills').textContent = bills.length;
+        // ========== MODAL ==========
+        function openModal(title, message, confirmText = 'Eliminar') {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = message;
+            document.getElementById('modalConfirmBtn').textContent = confirmText;
+            document.getElementById('confirmModal').classList.add('active');
+        }
 
-                    // Mostrar tabla
-                    const container = document.getElementById('billsContainer');
-                    
-                    if (bills.length === 0) {
-                        container.innerHTML = `
-                            <div class="empty-state">
-                                <div class="empty-state-icon">📭</div>
-                                <p>No hay facturas registradas aún</p>
-                            </div>
-                        `;
+        function closeModal() {
+            document.getElementById('confirmModal').classList.remove('active');
+            deleteAction = null;
+        }
+
+        // ========== MODAL DE ELIMINACIÓN ==========
+        function openDeleteAllModal() {
+            deleteAction = 'deleteAll';
+            openModal('⚠️ Eliminar Todas las Facturas', '¿ESTÁS SEGURO? Esto eliminará TODAS las facturas registradas y no se puede deshacer.', 'Sí, Eliminar Todo');
+        }
+
+        function openDeleteOneModal(billId) {
+            deleteAction = { type: 'deleteOne', id: billId };
+            openModal('Eliminar Factura', '¿Estás seguro de que quieres eliminar esta factura?', 'Sí, Eliminar');
+        }
+
+        async function confirmDelete() {
+            if (!deleteAction) return;
+
+            closeModal();
+
+            if (deleteAction === 'deleteAll') {
+                await deletAllBills();
+            } else if (deleteAction.type === 'deleteOne') {
+                await deleteBill(deleteAction.id);
+            }
+
+            deleteAction = null;
+        }
+
+        // ========== CARGAR FACTURAS ==========
+        async function loadBills() {
+            try {
+                const response = await fetch(`/api/bills?page=1&limit=1000`);
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        handleLogout();
                         return;
                     }
+                    throw new Error('Error loading bills');
+                }
 
-                    let html = `
-                        <div class="responsive-table">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Nombre</th>
-                                        <th>Apellidos</th>
-                                        <th>Email</th>
-                                        <th>Código</th>
-                                        <th>Fecha Captura</th>
-                                        <th>URL</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                    `;
+                const data = await response.json();
+                allBills = data.bills || [];
+                filteredBills = [...allBills];
+                currentPage = 1;
 
-                    bills.forEach(bill => {
-                        const codigo = bill.url.includes('cp=') 
-                            ? bill.url.split('cp=')[1].split('&')[0] 
-                            : 'N/A';
-                        
-                        const nombre = bill.nombre || '-';
-                        const apellidos = bill.apellidos || '-';
-                        const email = bill.email || '-';
-                        const fechaCaptura = new Date(bill.fecha_captura).toLocaleString('es-ES');
-                        
-                        html += `
+                document.getElementById('totalBills').textContent = allBills.length;
+                displayBills();
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('error', '❌ Error al cargar facturas');
+            }
+        }
+
+        function displayBills() {
+            const container = document.getElementById('billsContainer');
+
+            if (filteredBills.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <p>No hay facturas registradas</p>
+                    </div>
+                `;
+                document.getElementById('paginationContainer').innerHTML = '';
+                return;
+            }
+
+            // Paginación
+            const totalPages = Math.ceil(filteredBills.length / itemsPerPage);
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const pageItems = filteredBills.slice(start, end);
+
+            let html = `
+                <div class="responsive-table">
+                    <table>
+                        <thead>
                             <tr>
-                                <td><strong>${bill.id}</strong></td>
-                                <td>${nombre}</td>
-                                <td>${apellidos}</td>
-                                <td>${email}</td>
-                                <td><strong>${codigo}</strong></td>
-                                <td>${fechaCaptura}</td>
-                                <td>
-                                    <a href="${bill.url}" target="_blank" class="url-cell" title="${bill.url}">
-                                        📄 Ver en CNMC
-                                    </a>
-                                </td>
-                                <td>
-                                    <button class="btn btn-danger" onclick="deleteBill(${bill.id})">
-                                        🗑️ Eliminar
-                                    </button>
-                                </td>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Apellidos</th>
+                                <th>Email</th>
+                                <th>Código</th>
+                                <th>Fecha Captura</th>
+                                <th>URL</th>
+                                <th>Acciones</th>
                             </tr>
-                        `;
-                    });
+                        </thead>
+                        <tbody>
+            `;
 
-                    html += `
-                                </tbody>
-                            </table>
-                        </div>
-                    `;
+            pageItems.forEach(bill => {
+                const fechaCaptura = new Date(bill.fecha_captura).toLocaleString('es-ES');
+                
+                html += `
+                    <tr>
+                        <td><strong>${bill.id}</strong></td>
+                        <td>${bill.nombre || '-'}</td>
+                        <td>${bill.apellidos || '-'}</td>
+                        <td>${bill.email || '-'}</td>
+                        <td><strong>${bill.codigo || 'N/A'}</strong></td>
+                        <td>${fechaCaptura}</td>
+                        <td>
+                            <a href="${bill.url}" target="_blank" class="url-cell" title="${bill.url}">
+                                📄 Ver en CNMC
+                            </a>
+                        </td>
+                        <td>
+                            <button class="btn btn-danger" onclick="openDeleteOneModal(${bill.id})">
+                                🗑️ Eliminar
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
 
-                    container.innerHTML = html;
-                })
-                .catch(err => {
-                    console.error('Error:', err);
-                    showAlert('error', '❌ Error al cargar facturas');
-                });
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            container.innerHTML = html;
+
+            // Renderizar paginación
+            renderPagination(totalPages);
         }
 
-        function deleteBill(id) {
-            if (!confirm('¿Estás seguro de que quieres eliminar esta factura?')) return;
+        function renderPagination(totalPages) {
+            const container = document.getElementById('paginationContainer');
+            
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
 
-            fetch(`/api/bills/${id}`, { method: 'DELETE' })
-                .then(response => response.json())
-                .then(data => {
-                    showAlert('success', '✅ Factura eliminada');
+            let html = '';
+
+            // Botón anterior
+            if (currentPage > 1) {
+                html += `<button onclick="goToPage(${currentPage - 1})">← Anterior</button>`;
+            }
+
+            // Números de página
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === currentPage) {
+                    html += `<button class="active">${i}</button>`;
+                } else if (i <= 3 || i >= totalPages - 2 || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                    html += `<button onclick="goToPage(${i})">${i}</button>`;
+                } else if (i === 4 || i === totalPages - 3) {
+                    html += `<span>...</span>`;
+                }
+            }
+
+            // Botón siguiente
+            if (currentPage < totalPages) {
+                html += `<button onclick="goToPage(${currentPage + 1})">Siguiente →</button>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            displayBills();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ========== BÚSQUEDA ==========
+        function search() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            filteredBills = allBills.filter(bill => 
+                bill.nombre?.toLowerCase().includes(searchTerm) ||
+                bill.apellidos?.toLowerCase().includes(searchTerm) ||
+                bill.email?.toLowerCase().includes(searchTerm) ||
+                bill.codigo?.toLowerCase().includes(searchTerm)
+            );
+
+            currentPage = 1;
+            displayBills();
+        }
+
+        // ========== ELIMINAR ==========
+        async function deleteBill(id) {
+            try {
+                const response = await fetch(`/api/bills/${id}`, { method: 'DELETE' });
+                
+                if (!response.ok) throw new Error('Error deleting');
+                
+                showAlert('success', '✅ Factura eliminada');
+                loadBills();
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('error', '❌ Error al eliminar');
+            }
+        }
+
+        async function deletAllBills() {
+            try {
+                const response = await fetch('/api/bills', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ confirmation: 'DELETE_ALL_BILLS' })
+                });
+
+                if (!response.ok) throw new Error('Error deleting all');
+
+                const data = await response.json();
+                showAlert('success', `✅ ${data.deleted} facturas eliminadas`);
+                loadBills();
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('error', '❌ Error al eliminar todas');
+            }
+        }
+
+        // ========== EXPORTAR ==========
+        async function downloadExcel() {
+            try {
+                const response = await fetch('/api/download/excel');
+                if (!response.ok) throw new Error('Error downloading');
+                
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `facturas_${new Date().toISOString().split('T')[0]}.xlsx`;
+                a.click();
+                
+                showAlert('success', '✅ Excel descargado');
+            } catch (error) {
+                showAlert('error', '❌ Error al descargar Excel');
+            }
+        }
+
+        async function downloadCSV() {
+            try {
+                const response = await fetch('/api/download/csv');
+                if (!response.ok) throw new Error('Error downloading');
+                
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `facturas_${new Date().toISOString().split('T')[0]}.csv`;
+                a.click();
+                
+                showAlert('success', '✅ CSV descargado');
+            } catch (error) {
+                showAlert('error', '❌ Error al descargar CSV');
+            }
+        }
+
+        async function downloadJSON() {
+            try {
+                const response = await fetch('/api/download/json');
+                if (!response.ok) throw new Error('Error downloading');
+                
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `facturas_${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                
+                showAlert('success', '✅ JSON descargado');
+            } catch (error) {
+                showAlert('error', '❌ Error al descargar JSON');
+            }
+        }
+
+        // ========== AUTO-REFRESH ==========
+        let autoRefreshInterval;
+
+        function startAutoRefresh() {
+            autoRefreshInterval = setInterval(() => {
+                if (document.hidden === false) {
                     loadBills();
-                })
-                .catch(err => {
-                    console.error('Error:', err);
-                    showAlert('error', '❌ Error al eliminar');
-                });
+                }
+            }, 10000); // Cada 10 segundos
         }
 
-        function deleteAll() {
-            if (!confirm('⚠️ ¿ESTÁS SEGURO? Esto eliminará TODAS las facturas.')) return;
-
-            fetch('/api/bills', { method: 'DELETE' })
-                .then(response => response.json())
-                .then(data => {
-                    showAlert('success', '✅ Todas las facturas fueron eliminadas');
-                    loadBills();
-                })
-                .catch(err => {
-                    console.error('Error:', err);
-                    showAlert('error', '❌ Error al eliminar todas');
-                });
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
         }
 
-        function downloadExcel() {
-            fetch('/api/bills')
-                .then(response => response.json())
-                .then(bills => {
-                    const excelData = bills.map(bill => ({
-                        'ID': bill.id,
-                        'Nombre': bill.nombre || '-',
-                        'Apellidos': bill.apellidos || '-',
-                        'Email': bill.email || '-',
-                        'Código': bill.url.split('?cp=')[1] ? bill.url.split('?cp=')[1].split('&')[0] : 'N/A',
-                        'Fecha Captura': bill.fecha_captura,
-                        'URL': bill.url
-                    }));
-
-                    const ws = XLSX.utils.json_to_sheet(excelData);
-                    const wb = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(wb, ws, 'Facturas');
-
-                    XLSX.writeFile(wb, `facturas_energia_${new Date().toISOString().split('T')[0]}.xlsx`);
-                    showAlert('success', '✅ Excel descargado correctamente');
-                })
-                .catch(err => {
-                    console.error('Error:', err);
-                    showAlert('error', '❌ Error al descargar Excel');
-                });
-        }
-
-        function downloadCSV() {
-            fetch('/api/bills')
-                .then(response => response.json())
-                .then(bills => {
-                    let csv = 'ID,Nombre,Apellidos,Email,Código,Fecha Captura,URL\n';
-                    
-                    bills.forEach(bill => {
-                        const codigo = bill.url.split('?cp=')[1] ? bill.url.split('?cp=')[1].split('&')[0] : 'N/A';
-                        const nombre = (bill.nombre || '-').replace(/"/g, '""');
-                        const apellidos = (bill.apellidos || '-').replace(/"/g, '""');
-                        const email = (bill.email || '-').replace(/"/g, '""');
-                        const url = bill.url.replace(/"/g, '""');
-                        
-                        csv += `${bill.id},"${nombre}","${apellidos}","${email}","${codigo}","${bill.fecha_captura}","${url}"\n`;
-                    });
-
-                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = `facturas_energia_${new Date().toISOString().split('T')[0]}.csv`;
-                    link.click();
-                    
-                    showAlert('success', '✅ CSV descargado correctamente');
-                })
-                .catch(err => {
-                    console.error('Error:', err);
-                    showAlert('error', '❌ Error al descargar CSV');
-                });
-        }
-
-        // Cargar facturas al abrir la página
-        loadBills();
-
-        // Actualizar cada 5 segundos
-        setInterval(loadBills, 5000);
+        // ========== ENTRADA DEL ENTER EN PASSWORD ==========
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('password').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    handleLogin();
+                }
+            });
+        });
     </script>
 </body>
 </html>
