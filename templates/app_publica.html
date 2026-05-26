@@ -527,8 +527,7 @@
         let isScanning = false;
         let stream = null;
         let lastScannedData = null;
-        let maxRetries = 3;
-        let retryCount = 0;
+        let animationFrameId = null; // Guardará el ID de la animación para frenarla por completo
 
         // Mostrar alertas
         function showAlert(type, message) {
@@ -563,13 +562,23 @@
 
         async function startCamera() {
             try {
-                stream = await navigator.mediaDevices.getUserMedia({
+                // Configuración Ultra-Nítida optimizada para QR densos (Full HD / HD Alto)
+                const constraints = {
                     video: {
-                        facingMode: 'environment',
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
+                        facingMode: { exact: 'environment' }, // Obliga a usar la cámara trasera principal
+                        width: { ideal: 1920, max: 1920 },
+                        height: { ideal: 1080, max: 1080 },
+                        focusMode: 'continuous'               // Enfoque continuo automático activo
                     }
-                });
+                };
+
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia(constraints);
+                } catch (e) {
+                    // Si falla el 'exact: environment' (ej. en ordenadores), entra un modo compatible básico
+                    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                }
+
                 video.srcObject = stream;
                 video.onloadedmetadata = () => {
                     canvas.width = video.videoWidth;
@@ -581,6 +590,9 @@
                     document.getElementById('resultContainer').classList.add('hidden');
                     document.getElementById('formSection').classList.add('hidden');
                     document.getElementById('noResultText').classList.remove('hidden');
+                    
+                    // Cancela cualquier bucle colgado antes de arrancar uno limpio
+                    if (animationFrameId) cancelAnimationFrame(animationFrameId);
                     scan();
                 };
             } catch (error) {
@@ -590,25 +602,37 @@
 
         function stopCamera() {
             isScanning = false;
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId); // Frenar el bucle jsQR por completo
+                animationFrameId = null;
+            }
             if (stream) {
-                stream.getTracks().forEach(track => track.stop());
+                stream.getTracks().forEach(track => track.stop()); // Apagar hardware físico
+                stream = null;
             }
             document.getElementById('startBtn').disabled = false;
             document.getElementById('cameraStatus').style.display = 'none';
         }
 
         function scan() {
-            if (isScanning) {
+            if (!isScanning) return; // Si la cámara se mandó apagar, no procesar nada
+
+            if (video.readyState === video.HAVE_CURRENT_DATA || video.readyState === video.HAVE_ENOUGH_DATA) {
                 context.drawImage(video, 0, 0, canvas.width, canvas.height);
                 let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                let code = jsQR(imageData.data, imageData.width, imageData.height);
+                
+                // jsQR analiza el fotograma de alta definición
+                let code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: "dontInvert", // Acelera el procesado un 50% enfocando QR oscuros sobre fondo claro
+                });
 
-                if (code) {
+                if (code && code.data.trim() !== "") {
+                    stopCamera(); // Detiene cámara y bucle al instante para evitar saturación
                     displayResult(code);
+                    return; // Rompe el flujo para asegurar que no pida otro fotograma
                 }
-
-                requestAnimationFrame(scan);
             }
+            animationFrameId = requestAnimationFrame(scan);
         }
 
         function displayResult(code) {
@@ -632,12 +656,10 @@
                     showAlert('error', `❌ ${data.error || 'Error en la validación'}`);
                     document.getElementById('formSection').classList.add('hidden');
                     document.getElementById('noResultText').classList.remove('hidden');
-                    stopCamera();
                     return;
                 }
 
                 if (data.existe) {
-                    // QR duplicado
                     document.getElementById('resultContainer').classList.add('hidden');
                     document.getElementById('noResultText').classList.add('hidden');
                     document.getElementById('formSection').classList.add('hidden');
@@ -645,13 +667,10 @@
                     document.getElementById('qrData').textContent = qrUrl;
                     document.getElementById('qrUrl').innerHTML = `<a href="${qrUrl}" target="_blank">📄 Ver en CNMC</a>`;
                     document.getElementById('processingStatus').innerHTML = '⚠️ Este QR ya fue escaneado anteriormente';
-                    document.getElementById('processingStatus').classList.add('warning');
-                    document.getElementById('processingStatus').classList.remove('success', 'error');
+                    document.getElementById('processingStatus').className = 'result-value warning';
 
                     document.getElementById('resultContainer').classList.remove('hidden');
-                    stopCamera();
                 } else {
-                    // QR nuevo - mostrar formulario
                     clearFormErrors();
                     document.getElementById('resultContainer').classList.add('hidden');
                     document.getElementById('noResultText').classList.add('hidden');
@@ -660,15 +679,12 @@
                     document.getElementById('nombre').value = '';
                     document.getElementById('apellidos').value = '';
                     document.getElementById('email').value = '';
-
-                    stopCamera();
                 }
             } catch (error) {
                 console.error('Error:', error);
                 showAlert('error', '❌ Error de conexión con el servidor');
                 document.getElementById('formSection').classList.add('hidden');
                 document.getElementById('noResultText').classList.remove('hidden');
-                stopCamera();
             }
         }
 
@@ -736,6 +752,7 @@
 
             const status = document.createElement('div');
             status.className = 'result-item';
+            status.id = 'tempStatusItem';
             status.innerHTML = '<div class="result-label">Procesando</div><div class="result-value"><span class="spinner"></span>Guardando datos...</div>';
             document.getElementById('resultContainer').appendChild(status);
             document.getElementById('resultContainer').classList.remove('hidden');
@@ -756,14 +773,14 @@
                 });
 
                 const data = await response.json();
+                const tempStatus = document.getElementById('tempStatusItem');
+                if (tempStatus) tempStatus.remove();
 
                 if (response.status === 409) {
-                    // Duplicado
                     document.getElementById('qrData').textContent = qrUrl;
                     document.getElementById('qrUrl').innerHTML = `<a href="${qrUrl}" target="_blank">📄 Ver en CNMC</a>`;
                     document.getElementById('processingStatus').innerHTML = '⚠️ Este QR ya fue escaneado anteriormente';
-                    document.getElementById('processingStatus').classList.add('warning');
-                    status.remove();
+                    document.getElementById('processingStatus').className = 'result-value warning';
                     return;
                 }
 
@@ -771,22 +788,19 @@
                     document.getElementById('qrData').textContent = qrUrl;
                     document.getElementById('qrUrl').innerHTML = `<a href="${qrUrl}" target="_blank">📄 Ver en CNMC</a>`;
                     document.getElementById('processingStatus').innerHTML = '✓ Guardado correctamente';
-                    document.getElementById('processingStatus').classList.add('success');
-                    document.getElementById('processingStatus').classList.remove('error', 'warning');
-                    status.remove();
+                    document.getElementById('processingStatus').className = 'result-value success';
                     showAlert('success', '✅ Datos guardados correctamente');
                 } else {
                     document.getElementById('processingStatus').innerHTML = `❌ ${data.error || 'Error desconocido'}`;
-                    document.getElementById('processingStatus').classList.add('error');
-                    document.getElementById('processingStatus').classList.remove('success', 'warning');
-                    status.remove();
+                    document.getElementById('processingStatus').className = 'result-value error';
                     showAlert('error', `❌ ${data.error}`);
                 }
             } catch (error) {
                 console.error('Error:', error);
+                const tempStatus = document.getElementById('tempStatusItem');
+                if (tempStatus) tempStatus.remove();
                 document.getElementById('processingStatus').innerHTML = '❌ Error de conexión';
-                document.getElementById('processingStatus').classList.add('error');
-                status.remove();
+                document.getElementById('processingStatus').className = 'result-value error';
                 showAlert('error', '❌ Error de conexión con el servidor');
             }
         }
