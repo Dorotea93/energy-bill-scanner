@@ -1,809 +1,471 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Energy Bill Scanner</title>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
-    <style>
-        :root {
-            --color-primary: #32b8c6;
-            --color-bg: #fcfcf9;
-            --color-text: #134252;
-            --color-border: #5e5240;
-            --color-success: #2a9fab;
-            --color-error: #c01527;
-            --color-warning: #ff9800;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: var(--color-bg);
-            color: var(--color-text);
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        h1 {
-            font-size: 24px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .scanner-section {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            border: 1px solid rgba(94, 82, 64, 0.2);
-            margin-bottom: 20px;
-        }
-
-        .camera-label {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--color-text);
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .video-container {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 1 / 1;
-            background: #000;
-            border-radius: 8px;
-            overflow: hidden;
-            margin-bottom: 15px;
-        }
-
-        #video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-
-        .qr-guide {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 280px;
-            height: 280px;
-            border: 3px solid var(--color-primary);
-            border-radius: 12px;
-            background: transparent;
-            box-shadow: 
-                inset 0 0 20px rgba(50, 184, 198, 0.3),
-                0 0 30px rgba(50, 184, 198, 0.4);
-            pointer-events: none;
-            z-index: 10;
-            animation: pulse-border 2s ease-in-out infinite;
-        }
-
-        .qr-guide::before {
-            content: '';
-            position: absolute;
-            top: -3px;
-            left: -3px;
-            right: -3px;
-            bottom: -3px;
-            border: 2px solid rgba(50, 184, 198, 0.2);
-            border-radius: 12px;
-            animation: rotate-guide 8s linear infinite;
-        }
-
-        .qr-guide-label {
-            position: absolute;
-            top: -35px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--color-primary);
-            color: white;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-            white-space: nowrap;
-            z-index: 11;
-        }
-
-        .qr-guide-label::after {
-            content: '';
-            position: absolute;
-            bottom: -4px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 0;
-            border-left: 6px solid transparent;
-            border-right: 6px solid transparent;
-            border-top: 6px solid var(--color-primary);
-        }
-
-        .qr-corner {
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            border: 2px solid var(--color-primary);
-        }
-
-        .qr-corner-top-left {
-            top: -3px;
-            left: -3px;
-            border-right: none;
-            border-bottom: none;
-        }
-
-        .qr-corner-top-right {
-            top: -3px;
-            right: -3px;
-            border-left: none;
-            border-bottom: none;
-        }
-
-        .qr-corner-bottom-left {
-            bottom: -3px;
-            left: -3px;
-            border-right: none;
-            border-top: none;
-        }
-
-        .qr-corner-bottom-right {
-            bottom: -3px;
-            right: -3px;
-            border-left: none;
-            border-top: none;
-        }
-
-        @keyframes pulse-border {
-            0%, 100% { box-shadow: inset 0 0 20px rgba(50, 184, 198, 0.3), 0 0 30px rgba(50, 184, 198, 0.4); }
-            50% { box-shadow: inset 0 0 30px rgba(50, 184, 198, 0.5), 0 0 40px rgba(50, 184, 198, 0.6); }
-        }
-
-        @keyframes rotate-guide {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        button {
-            flex: 1;
-            padding: 12px;
-            background: var(--color-primary);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s ease;
-        }
-
-        button:hover {
-            background: #2a9fab;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(50, 184, 198, 0.3);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .result-section {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            border: 1px solid rgba(94, 82, 64, 0.2);
-        }
-
-        .result-item {
-            margin-bottom: 15px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid rgba(94, 82, 64, 0.1);
-        }
-
-        .result-item:last-child {
-            margin-bottom: 0;
-            padding-bottom: 0;
-            border-bottom: none;
-        }
-
-        .result-label {
-            font-weight: 600;
-            font-size: 12px;
-            color: var(--color-primary);
-            text-transform: uppercase;
-            margin-bottom: 5px;
-        }
-
-        .result-value {
-            font-size: 14px;
-            word-break: break-all;
-        }
-
-        .result-value.success {
-            color: var(--color-success);
-            font-weight: 500;
-        }
-
-        .result-value.error {
-            color: var(--color-error);
-        }
-
-        .result-value.warning {
-            color: var(--color-warning);
-        }
-
-        .result-value a {
-            color: var(--color-primary);
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .result-value a:hover {
-            text-decoration: underline;
-        }
-
-        .form-section {
-            background: rgba(50, 184, 198, 0.05);
-            border: 1px solid rgba(50, 184, 198, 0.2);
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 15px;
-        }
-
-        .form-section h3 {
-            font-size: 16px;
-            margin-bottom: 15px;
-            color: var(--color-text);
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group:last-child {
-            margin-bottom: 0;
-        }
-
-        .form-group label {
-            display: block;
-            font-weight: 600;
-            font-size: 13px;
-            color: var(--color-text);
-            margin-bottom: 5px;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid rgba(94, 82, 64, 0.2);
-            border-radius: 6px;
-            font-size: 14px;
-            font-family: inherit;
-            box-sizing: border-box;
-            transition: border-color 0.3s ease;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: var(--color-primary);
-            box-shadow: 0 0 0 2px rgba(50, 184, 198, 0.1);
-        }
-
-        .form-group input.error {
-            border-color: var(--color-error);
-        }
-
-        .form-error {
-            color: var(--color-error);
-            font-size: 12px;
-            margin-top: 3px;
-        }
-
-        .form-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .form-actions button {
-            flex: 1;
-            padding: 10px;
-            font-size: 13px;
-        }
-
-        .btn-guardar {
-            background: var(--color-primary);
-        }
-
-        .btn-guardar:hover {
-            background: #2a9fab;
-        }
-
-        .btn-cancelar {
-            background: #999;
-        }
-
-        .btn-cancelar:hover {
-            background: #777;
-        }
-
-        .info-box {
-            background: rgba(50, 184, 198, 0.1);
-            border-left: 4px solid var(--color-primary);
-            padding: 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            margin-top: 15px;
-            color: var(--color-text);
-        }
-
-        .info-box strong {
-            color: var(--color-primary);
-        }
-
-        .info-box ol {
-            margin: 8px 0 0 20px;
-            padding: 0;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .spinner {
-            border: 3px solid rgba(50, 184, 198, 0.3);
-            border-top: 3px solid var(--color-primary);
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            animation: spin 0.8s linear infinite;
-            display: inline-block;
-            margin-right: 8px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .alert {
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            font-size: 13px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .alert-error {
-            background: rgba(192, 21, 47, 0.1);
-            color: var(--color-error);
-            border: 1px solid var(--color-error);
-        }
-
-        .alert-success {
-            background: rgba(42, 155, 171, 0.1);
-            color: var(--color-success);
-            border: 1px solid var(--color-success);
-        }
-
-        @media (max-width: 480px) {
-            h1 {
-                font-size: 20px;
-            }
-
-            .qr-guide {
-                width: 240px;
-                height: 240px;
-            }
-
-            .scanner-section {
-                padding: 15px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>⚡ Energy Bill Scanner</h1>
-        <p style="text-align: center; font-size: 13px; color: var(--color-text); margin: -15px 0 20px 0;">
-            Escanea el código QR de tu comparador de ofertas vigentes de las comercializadoras de energía eléctrica
-        </p>
-
-        <div id="alertDiv"></div>
-
-        <div class="scanner-section">
-            <div class="camera-label" id="cameraStatus" style="display: none;">
-                <span id="statusMessage">Aún no se ha detectado ningún código QR. Inicia la cámara e intenta escanear.</span>
-            </div>
-
-            <div class="video-container">
-                <video id="video" autoplay playsinline></video>
-
-                <div class="qr-guide">
-                    <div class="qr-guide-label">Coloca el QR aquí</div>
-                    <div class="qr-corner qr-corner-top-left"></div>
-                    <div class="qr-corner qr-corner-top-right"></div>
-                    <div class="qr-corner qr-corner-bottom-left"></div>
-                    <div class="qr-corner qr-corner-bottom-right"></div>
-                </div>
-            </div>
-
-            <div class="controls">
-                <button id="startBtn" onclick="startCamera()">📷 Iniciar Scanner</button>
-            </div>
-
-            <div class="info-box">
-                <strong>📋 Cómo usar:</strong>
-                <ol>
-                    <li>Haz click en <strong>Iniciar Scanner</strong></li>
-                    <li>Permite acceso a la cámara de tu móvil</li>
-                    <li>Alinea el código QR dentro del recuadro azul</li>
-                </ol>
-            </div>
-        </div>
-
-        <div class="result-section">
-            <h2 style="font-size: 16px; margin-bottom: 15px;">Resultado del Escaneo</h2>
-            <div id="resultContainer" class="hidden">
-                <div class="result-item">
-                    <div class="result-label">Código QR Detectado</div>
-                    <div id="qrData" class="result-value"></div>
-                </div>
-                <div class="result-item">
-                    <div class="result-label">URL Detectada</div>
-                    <div id="qrUrl" class="result-value"></div>
-                </div>
-                <div class="result-item">
-                    <div class="result-label">Estado</div>
-                    <div id="processingStatus" class="result-value"></div>
-                </div>
-            </div>
-
-            <div id="formSection" class="form-section hidden">
-                <h3>Completa tus datos</h3>
-
-                <div class="form-group">
-                    <label for="nombre">Nombre *</label>
-                    <input type="text" id="nombre" placeholder="Tu nombre" maxlength="100">
-                    <div id="errorNombre" class="form-error hidden"></div>
-                </div>
-
-                <div class="form-group">
-                    <label for="apellidos">Apellidos *</label>
-                    <input type="text" id="apellidos" placeholder="Tus apellidos" maxlength="100">
-                    <div id="errorApellidos" class="form-error hidden"></div>
-                </div>
-
-                <div class="form-group">
-                    <label for="email">Email *</label>
-                    <input type="email" id="email" placeholder="tu@email.com" maxlength="255">
-                    <div id="errorEmail" class="form-error hidden"></div>
-                </div>
-
-                <div class="form-actions">
-                    <button class="btn-guardar" onclick="guardarDatos()">✓ Guardar Datos</button>
-                    <button class="btn-cancelar" onclick="cancelarFormulario()">✕ Cancelar</button>
-                </div>
-            </div>
-
-            <div id="noResultText" style="color: var(--color-text); font-size: 14px;">
-                Aún no se ha detectado ningún código QR. Inicia la cámara e intenta escanear.
-            </div>
-        </div>
-    </div>
-
-    <script>
-        let video = document.getElementById('video');
-        let canvas = document.createElement('canvas');
-        let context = canvas.getContext('2d');
-        let isScanning = false;
-        let stream = null;
-        let lastScannedData = null;
-        let animationFrameId = null; // Guardará el ID de la animación para frenarla por completo
-
-        // Mostrar alertas
-        function showAlert(type, message) {
-            const alertDiv = document.getElementById('alertDiv');
-            alertDiv.className = `alert alert-${type}`;
-            alertDiv.innerHTML = `<span>${message}</span>`;
-            alertDiv.style.display = 'flex';
-
-            setTimeout(() => {
-                alertDiv.style.display = 'none';
-            }, 4000);
-        }
-
-        // Limpiar errores de formulario
-        function clearFormErrors() {
-            document.getElementById('nombre').classList.remove('error');
-            document.getElementById('apellidos').classList.remove('error');
-            document.getElementById('email').classList.remove('error');
-            document.getElementById('errorNombre').classList.add('hidden');
-            document.getElementById('errorApellidos').classList.add('hidden');
-            document.getElementById('errorEmail').classList.add('hidden');
-        }
-
-        // Mostrar error en campo
-        function showFieldError(fieldId, message) {
-            const input = document.getElementById(fieldId);
-            const errorDiv = document.getElementById(`error${fieldId.charAt(0).toUpperCase() + fieldId.slice(1)}`);
-            input.classList.add('error');
-            errorDiv.textContent = message;
-            errorDiv.classList.remove('hidden');
-        }
-
-        async function startCamera() {
-            try {
-                // Configuración Ultra-Nítida optimizada para QR densos (Full HD / HD Alto)
-                const constraints = {
-                    video: {
-                        facingMode: { exact: 'environment' }, // Obliga a usar la cámara trasera principal
-                        width: { ideal: 1920, max: 1920 },
-                        height: { ideal: 1080, max: 1080 },
-                        focusMode: 'continuous'               // Enfoque continuo automático activo
-                    }
-                };
-
-                try {
-                    stream = await navigator.mediaDevices.getUserMedia(constraints);
-                } catch (e) {
-                    // Si falla el 'exact: environment' (ej. en ordenadores), entra un modo compatible básico
-                    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                }
-
-                video.srcObject = stream;
-                video.onloadedmetadata = () => {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    isScanning = true;
-                    document.getElementById('startBtn').disabled = true;
-                    document.getElementById('cameraStatus').style.display = 'flex';
-                    document.getElementById('statusMessage').textContent = 'Escaneando...';
-                    document.getElementById('resultContainer').classList.add('hidden');
-                    document.getElementById('formSection').classList.add('hidden');
-                    document.getElementById('noResultText').classList.remove('hidden');
-                    
-                    // Cancela cualquier bucle colgado antes de arrancar uno limpio
-                    if (animationFrameId) cancelAnimationFrame(animationFrameId);
-                    scan();
-                };
-            } catch (error) {
-                showAlert('error', '❌ Error al acceder a la cámara: ' + error.message);
-            }
-        }
-
-        function stopCamera() {
-            isScanning = false;
-            if (animationFrameId) {
-                cancelAnimationFrame(animationFrameId); // Frenar el bucle jsQR por completo
-                animationFrameId = null;
-            }
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop()); // Apagar hardware físico
-                stream = null;
-            }
-            document.getElementById('startBtn').disabled = false;
-            document.getElementById('cameraStatus').style.display = 'none';
-        }
-
-        function scan() {
-            if (!isScanning) return; // Si la cámara se mandó apagar, no procesar nada
-
-            if (video.readyState === video.HAVE_CURRENT_DATA || video.readyState === video.HAVE_ENOUGH_DATA) {
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                
-                // jsQR analiza el fotograma de alta definición
-                let code = jsQR(imageData.data, imageData.width, imageData.height, {
-                    inversionAttempts: "dontInvert", // Acelera el procesado un 50% enfocando QR oscuros sobre fondo claro
-                });
-
-                if (code && code.data.trim() !== "") {
-                    stopCamera(); // Detiene cámara y bucle al instante para evitar saturación
-                    displayResult(code);
-                    return; // Rompe el flujo para asegurar que no pida otro fotograma
-                }
-            }
-            animationFrameId = requestAnimationFrame(scan);
-        }
-
-        function displayResult(code) {
-            lastScannedData = code.data;
-            verificarQREnBD(code.data);
-        }
-
-        async function verificarQREnBD(qrUrl) {
-            try {
-                const response = await fetch('/api/check-qr', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ url: qrUrl })
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    showAlert('error', `❌ ${data.error || 'Error en la validación'}`);
-                    document.getElementById('formSection').classList.add('hidden');
-                    document.getElementById('noResultText').classList.remove('hidden');
-                    return;
-                }
-
-                if (data.existe) {
-                    document.getElementById('resultContainer').classList.add('hidden');
-                    document.getElementById('noResultText').classList.add('hidden');
-                    document.getElementById('formSection').classList.add('hidden');
-
-                    document.getElementById('qrData').textContent = qrUrl;
-                    document.getElementById('qrUrl').innerHTML = `<a href="${qrUrl}" target="_blank">📄 Ver en CNMC</a>`;
-                    document.getElementById('processingStatus').innerHTML = '⚠️ Este QR ya fue escaneado anteriormente';
-                    document.getElementById('processingStatus').className = 'result-value warning';
-
-                    document.getElementById('resultContainer').classList.remove('hidden');
-                } else {
-                    clearFormErrors();
-                    document.getElementById('resultContainer').classList.add('hidden');
-                    document.getElementById('noResultText').classList.add('hidden');
-                    document.getElementById('formSection').classList.remove('hidden');
-
-                    document.getElementById('nombre').value = '';
-                    document.getElementById('apellidos').value = '';
-                    document.getElementById('email').value = '';
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showAlert('error', '❌ Error de conexión con el servidor');
-                document.getElementById('formSection').classList.add('hidden');
-                document.getElementById('noResultText').classList.remove('hidden');
-            }
-        }
-
-        function validarFormulario() {
-            const nombre = document.getElementById('nombre').value.trim();
-            const apellidos = document.getElementById('apellidos').value.trim();
-            const email = document.getElementById('email').value.trim();
+from flask import Flask, render_template, request, jsonify, send_file, session
+from flask_cors import CORS
+import sqlite3
+from datetime import datetime
+import os
+import json
+import io
+import pytz
+import xlsxwriter
+import hashlib
+import secrets
+from email_validator import validate_email, EmailNotValidError
+from urllib.parse import urlparse, parse_qs
+import logging
+
+app = Flask(__name__, static_folder='static')
+CORS(app)
+
+# 🔐 Configuración de seguridad
+app.secret_key = secrets.token_hex(32)
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin123')  # Cambiar en producción
+TIMEZONE = pytz.timezone('Europe/Madrid')
+
+# 📝 Logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Crear carpeta de datos si no existe
+if not os.path.exists('data'):
+    os.makedirs('data')
+
+
+def init_db():
+    """Inicializa la base de datos con todas las tablas necesarias"""
+    conn = sqlite3.connect('data/bills.db')
+    c = conn.cursor()
+
+    c.execute("""
+        SELECT name FROM sqlite_master 
+        WHERE type='table' AND name='bills'
+    """)
+    existe = c.fetchone()
+
+    if not existe:
+        c.execute('''
+            CREATE TABLE bills (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nombre TEXT NOT NULL,
+                apellidos TEXT NOT NULL,
+                email TEXT NOT NULL,
+                url TEXT NOT NULL UNIQUE,
+                codigo TEXT,
+                fecha_captura TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        c.execute('CREATE INDEX idx_email ON bills(email)')
+        c.execute('CREATE INDEX idx_nombre ON bills(nombre)')
+        c.execute('CREATE INDEX idx_fecha ON bills(fecha_captura DESC)')
+        logger.info("✓ Tabla bills creada con índices")
+    else:
+        c.execute("PRAGMA table_info(bills)")
+        columnas = {col[1] for col in c.fetchall()}
+        
+        if 'codigo' not in columnas:
+            c.execute('ALTER TABLE bills ADD COLUMN codigo TEXT')
+            logger.info("✓ Columna 'codigo' añadida")
+
+    conn.commit()
+    conn.close()
+    logger.info("✓ Base de datos inicializada correctamente")
+
+
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
+def validar_email(email):
+    try:
+        validate_email(email)
+        return True
+    except EmailNotValidError:
+        return False
+
+
+def validar_url_cnmc(url):
+    """Valida de forma infalible si la URL es de la CNMC (inmune a falta de http/https y mayúsculas)"""
+    if not url:
+        return False
+    try:
+        # Analizamos el texto en minúsculas y limpio de espacios
+        url_lower = url.strip().lower()
+        
+        # Comprobación de seguridad por palabras clave del dominio oficial
+        tiene_dominio = ('cnmc.gob.es' in url_lower) or ('comparador' in url_lower)
+        
+        # Comprobación de formato (factura clásica '?cp=' o nueva factura '/listado/')
+        tiene_formato = ('cp=' in url_lower) or ('listado' in url_lower)
+        
+        if tiene_dominio and tiene_formato:
+            return True
             
-            clearFormErrors();
-            let valido = true;
+        return False
+    except:
+        return False
 
-            if (!nombre) {
-                showFieldError('nombre', 'El nombre es requerido');
-                valido = false;
-            } else if (nombre.length < 2) {
-                showFieldError('nombre', 'El nombre debe tener al menos 2 caracteres');
-                valido = false;
-            }
 
-            if (!apellidos) {
-                showFieldError('apellidos', 'Los apellidos son requeridos');
-                valido = false;
-            } else if (apellidos.length < 2) {
-                showFieldError('apellidos', 'Los apellidos deben tener al menos 2 caracteres');
-                valido = false;
-            }
+def extraer_codigo_qr(url):
+    """Extrae el código identificador de la factura de forma segura"""
+    try:
+        url_clean = url.strip()
+        # Asegurar protocolo para no romper urlparse en la extracción
+        if not url_clean.lower().startswith(('http://', 'https://')):
+            url_clean = 'https://' + url_clean
+            
+        parsed = urlparse(url_clean)
+        params = parse_qs(parsed.query)
+        
+        # Formato clásico ?cp=
+        codigo = None
+        for k, v in params.items():
+            if k.lower() == 'cp':
+                codigo = v[0]
+                break
+                
+        # Formato nuevo /listado/ hash largo
+        if not codigo and 'listado' in parsed.path.lower():
+            path_parts = parsed.path.split('/')
+            for i, part in enumerate(path_parts):
+                if part.lower() == 'listado' and i + 1 < len(path_parts):
+                    # Extraemos los primeros 15 caracteres del hash para el Excel
+                    codigo = path_parts[i+1][:15] + "..."
+                    break
+                    
+        return codigo if codigo else 'N/A'
+    except Exception as e:
+        logger.error(f"Error extrayendo código: {e}")
+        return 'N/A'
 
-            if (!email) {
-                showFieldError('email', 'El email es requerido');
-                valido = false;
-            } else if (!validarEmail(email)) {
-                showFieldError('email', 'El email no es válido');
-                valido = false;
-            }
 
-            return valido;
-        }
+def get_db_connection():
+    conn = sqlite3.connect('data/bills.db')
+    conn.row_factory = sqlite3.Row
+    return conn
 
-        function validarEmail(email) {
-            const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return regex.test(email);
-        }
 
-        function guardarDatos() {
-            if (!validarFormulario()) {
-                return;
-            }
+init_db()
 
-            const nombre = document.getElementById('nombre').value.trim();
-            const apellidos = document.getElementById('apellidos').value.trim();
-            const email = document.getElementById('email').value.trim();
 
-            sendQRToAdmin(lastScannedData, nombre, apellidos, email);
-        }
+# ==================== AUTENTICACIÓN ====================
 
-        function cancelarFormulario() {
-            document.getElementById('formSection').classList.add('hidden');
-            document.getElementById('noResultText').classList.remove('hidden');
-            document.getElementById('startBtn').disabled = false;
-            clearFormErrors();
-        }
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    try:
+        data = request.json
+        password = data.get('password', '')
+        
+        if hash_password(password) == hash_password(ADMIN_PASSWORD):
+            session['authenticated'] = True
+            session.permanent = True
+            return jsonify({'success': True, 'message': 'Autenticado correctamente'})
+        else:
+            return jsonify({'success': False, 'error': 'Contraseña incorrecta'}), 401
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-        async function sendQRToAdmin(qrUrl, nombre, apellidos, email) {
-            document.getElementById('formSection').classList.add('hidden');
 
-            const status = document.createElement('div');
-            status.className = 'result-item';
-            status.id = 'tempStatusItem';
-            status.innerHTML = '<div class="result-label">Procesando</div><div class="result-value"><span class="spinner"></span>Guardando datos...</div>';
-            document.getElementById('resultContainer').appendChild(status);
-            document.getElementById('resultContainer').classList.remove('hidden');
-            document.getElementById('noResultText').classList.add('hidden');
+@app.route('/api/auth/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return jsonify({'success': True})
 
-            try {
-                const response = await fetch('/api/scrape', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        url: qrUrl,
-                        nombre: nombre,
-                        apellidos: apellidos,
-                        email: email
-                    })
-                });
 
-                const data = await response.json();
-                const tempStatus = document.getElementById('tempStatusItem');
-                if (tempStatus) tempStatus.remove();
+@app.route('/api/auth/check', methods=['GET'])
+def check_auth():
+    return jsonify({'authenticated': session.get('authenticated', False)})
 
-                if (response.status === 409) {
-                    document.getElementById('qrData').textContent = qrUrl;
-                    document.getElementById('qrUrl').innerHTML = `<a href="${qrUrl}" target="_blank">📄 Ver en CNMC</a>`;
-                    document.getElementById('processingStatus').innerHTML = '⚠️ Este QR ya fue escaneado anteriormente';
-                    document.getElementById('processingStatus').className = 'result-value warning';
-                    return;
-                }
 
-                if (data.success) {
-                    document.getElementById('qrData').textContent = qrUrl;
-                    document.getElementById('qrUrl').innerHTML = `<a href="${qrUrl}" target="_blank">📄 Ver en CNMC</a>`;
-                    document.getElementById('processingStatus').innerHTML = '✓ Guardado correctamente';
-                    document.getElementById('processingStatus').className = 'result-value success';
-                    showAlert('success', '✅ Datos guardados correctamente');
-                } else {
-                    document.getElementById('processingStatus').innerHTML = `❌ ${data.error || 'Error desconocido'}`;
-                    document.getElementById('processingStatus').className = 'result-value error';
-                    showAlert('error', `❌ ${data.error}`);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                const tempStatus = document.getElementById('tempStatusItem');
-                if (tempStatus) tempStatus.remove();
-                document.getElementById('processingStatus').innerHTML = '❌ Error de conexión';
-                document.getElementById('processingStatus').className = 'result-value error';
-                showAlert('error', '❌ Error de conexión con el servidor');
-            }
-        }
-    </script>
-</body>
-</html>
+def require_auth(f):
+    def decorated_function(*args, **kwargs):
+        if not session.get('authenticated'):
+            return jsonify({'error': 'No autenticado'}), 401
+        return f(*args, **kwargs)
+    decorated_function.__name__ = f.__name__
+    return decorated_function
+
+
+# ==================== RUTAS PÚBLICAS ====================
+
+@app.route('/')
+def index():
+    return render_template('app_publica.html')
+
+
+@app.route('/admin')
+def admin():
+    return render_template('admin_panel.html')
+
+
+@app.route('/api/check-qr', methods=['POST'])
+def check_qr():
+    try:
+        data = request.json
+        url = data.get('url', '').strip()
+
+        if not url:
+            return jsonify({'success': False, 'error': 'URL no proporcionada'}), 400
+
+        if not validar_url_cnmc(url):
+            return jsonify({'success': False, 'error': 'URL no válida para el comparador CNMC'}), 400
+
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute('SELECT id FROM bills WHERE url = ?', (url,))
+        existe = c.fetchone()
+        conn.close()
+
+        if existe:
+            return jsonify({'existe': True, 'id': existe['id']})
+        else:
+            return jsonify({'existe': False})
+
+    except Exception as e:
+        logger.error(f'Error en /api/check-qr: {e}')
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/scrape', methods=['POST'])
+def scrape():
+    try:
+        data = request.json
+        url = data.get('url', '').strip()
+        nombre = data.get('nombre', '').strip()
+        apellidos = data.get('apellidos', '').strip()
+        email = data.get('email', '').strip()
+
+        if not url or not nombre or not apellidos or not email:
+            return jsonify({'success': False, 'error': 'Faltan datos requeridos'}), 400
+
+        if not validar_email(email):
+            return jsonify({'success': False, 'error': 'Email no válido'}), 400
+
+        if not validar_url_cnmc(url):
+            return jsonify({'success': False, 'error': 'URL no válida'}), 400
+
+        nombre = nombre[:100]
+        apellidos = apellidos[:100]
+        email = email[:255]
+
+        conn = get_db_connection()
+        c = conn.cursor()
+
+        c.execute('SELECT id FROM bills WHERE url = ?', (url,))
+        if c.fetchone():
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': 'Esta factura ya fue escaneada',
+                'duplicado': True
+            }), 409
+
+        codigo = extraer_codigo_qr(url)
+        fecha_captura = datetime.now(TIMEZONE).isoformat()
+        
+        c.execute('''
+            INSERT INTO bills (nombre, apellidos, email, url, codigo, fecha_captura)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (nombre, apellidos, email, url, codigo, fecha_captura))
+
+        conn.commit()
+        last_id = c.lastrowid
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Factura guardada correctamente',
+            'id': last_id,
+            'url': url
+        })
+
+    except Exception as e:
+        logger.error(f'Error en /api/scrape: {e}')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ==================== RUTAS PROTEGIDAS (ADMIN) ====================
+
+@app.route('/api/bills', methods=['GET'])
+@require_auth
+def get_bills():
+    try:
+        page = int(request.args.get('page', 1))
+        limit = int(request.args.get('limit', 50))
+        search = request.args.get('search', '').strip()
+        
+        page = max(1, page)
+        limit = min(limit, 100)
+        offset = (page - 1) * limit
+
+        conn = get_db_connection()
+        c = conn.cursor()
+
+        query = 'SELECT id, nombre, apellidos, email, url, codigo, fecha_captura FROM bills'
+        params = []
+
+        if search:
+            query += ' WHERE nombre LIKE ? OR apellidos LIKE ? OR email LIKE ? OR codigo LIKE ?'
+            search_param = f'%{search}%'
+            params = [search_param, search_param, search_param, search_param]
+
+        count_query = f'SELECT COUNT(*) as total FROM ({query})'
+        total = c.execute(count_query, params).fetchone()['total']
+
+        query += ' ORDER BY fecha_captura DESC LIMIT ? OFFSET ?'
+        params.extend([limit, offset])
+
+        rows = c.execute(query, params).fetchall()
+        conn.close()
+
+        bills = []
+        for row in rows:
+            bills.append({
+                'id': row['id'],
+                'nombre': row['nombre'],
+                'apellidos': row['apellidos'],
+                'email': row['email'],
+                'url': row['url'],
+                'codigo': row['codigo'],
+                'fecha_captura': row['fecha_captura']
+            })
+
+        return jsonify({
+            'bills': bills,
+            'total': total,
+            'page': page,
+            'limit': limit,
+            'pages': (total + limit - 1) // limit
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/bills/<int:bill_id>', methods=['DELETE'])
+@require_auth
+def delete_bill(bill_id):
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute('DELETE FROM bills WHERE id = ?', (bill_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/bills', methods=['DELETE'])
+@require_auth
+def delete_all_bills():
+    try:
+        confirmation = request.json.get('confirmation') if request.json else None
+        if confirmation != 'DELETE_ALL_BILLS':
+            return jsonify({'error': 'Confirmación requerida'}), 400
+
+        conn = get_db_connection()
+        c = conn.cursor()
+        count = c.execute('SELECT COUNT(*) as total FROM bills').fetchone()['total']
+        c.execute('DELETE FROM bills')
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'deleted': count})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ==================== EXPORTACIONES ====================
+
+@app.route('/api/download/excel', methods=['GET'])
+@require_auth
+def download_excel():
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute('SELECT id, nombre, apellidos, email, codigo, fecha_captura, url FROM bills ORDER BY fecha_captura DESC')
+        rows = c.fetchall()
+        conn.close()
+
+        output = io.BytesIO()
+        workbook = xlsxwriter.Workbook(output)
+        worksheet = workbook.add_worksheet('Facturas')
+
+        header_format = workbook.add_format({'bold': True, 'bg_color': '#667eea', 'font_color': 'white', 'border': 1, 'align': 'center'})
+        cell_format = workbook.add_format({'border': 1})
+        url_format = workbook.add_format({'border': 1, 'text_wrap': True})
+        date_format = workbook.add_format({'border': 1, 'num_format': 'yyyy-mm-dd hh:mm:ss'})
+
+        headers = ['ID', 'Nombre', 'Apellidos', 'Email', 'Código', 'Fecha Captura', 'URL CNMC']
+        for col, header in enumerate(headers):
+            worksheet.write(0, col, header, header_format)
+
+        for row_num, row in enumerate(rows, start=1):
+            worksheet.write(row_num, 0, row['id'], cell_format)
+            worksheet.write(row_num, 1, row['nombre'] or '-', cell_format)
+            worksheet.write(row_num, 2, row['apellidos'] or '-', cell_format)
+            worksheet.write(row_num, 3, row['email'] or '-', cell_format)
+            worksheet.write(row_num, 4, row['codigo'] or '-', cell_format)
+            worksheet.write(row_num, 5, row['fecha_captura'], date_format)
+            worksheet.write(row_num, 6, row['url'], url_format)
+
+        worksheet.set_column(0, 0, 5)
+        worksheet.set_column(1, 3, 20)
+        worksheet.set_column(4, 4, 12)
+        worksheet.set_column(5, 5, 20)
+        worksheet.set_column(6, 6, 50)
+
+        workbook.close()
+        output.seek(0)
+
+        return send_file(output, as_attachment=True, download_name=f"facturas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx", mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/download/csv', methods=['GET'])
+@require_auth
+def download_csv():
+    try:
+        import csv
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute('SELECT id, nombre, apellidos, email, codigo, fecha_captura, url FROM bills ORDER BY fecha_captura DESC')
+        rows = c.fetchall()
+        conn.close()
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['ID', 'Nombre', 'Apellidos', 'Email', 'Código', 'Fecha Captura', 'URL CNMC'])
+
+        for row in rows:
+            writer.writerow([row['id'], row['nombre'] or '-', row['apellidos'] or '-', row['email'] or '-', row['codigo'] or '-', row['fecha_captura'], row['url']])
+
+        output_bytes = output.getvalue().encode('utf-8-sig')
+        output = io.BytesIO(output_bytes)
+
+        return send_file(output, mimetype='text/csv', as_attachment=True, download_name=f"facturas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/download/json', methods=['GET'])
+@require_auth
+def download_json():
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute('SELECT id, nombre, apellidos, email, codigo, fecha_captura, url FROM bills ORDER BY fecha_captura DESC')
+        rows = c.fetchall()
+        conn.close()
+
+        bills = []
+        for row in rows:
+            bills.append({'id': row['id'], 'nombre': row['nombre'], 'apellidos': row['apellidos'], 'email': row['email'], 'codigo': row['codigo'], 'url': row['url'], 'fecha_captura': row['fecha_captura']})
+
+        output = io.BytesIO(json.dumps(bills, indent=2, ensure_ascii=False).encode('utf-8'))
+        return send_file(output, mimetype='application/json', as_attachment=True, download_name=f"facturas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)
